@@ -5,19 +5,25 @@
 FROM node:20-alpine AS builder
 WORKDIR /app
 
-# Copy workspace manifests first for layer caching
+# Copy ALL workspace package.json files so npm can resolve the full workspace graph
 COPY package*.json ./
-COPY packages/crypto/package.json            ./packages/crypto/
-COPY packages/intent-compiler/package.json   ./packages/intent-compiler/
-COPY packages/registry-server/package.json   ./packages/registry-server/
-COPY packages/mailbox-server/package.json    ./packages/mailbox-server/
-COPY packages/audit-server/package.json      ./packages/audit-server/
-COPY packages/identity-service/package.json  ./packages/identity-service/
-COPY packages/human-auth/package.json        ./packages/human-auth/
+COPY packages/crypto/package.json              ./packages/crypto/
+COPY packages/intent-compiler/package.json     ./packages/intent-compiler/
+COPY packages/registry-server/package.json     ./packages/registry-server/
+COPY packages/mailbox-server/package.json      ./packages/mailbox-server/
+COPY packages/audit-server/package.json        ./packages/audit-server/
+COPY packages/identity-service/package.json    ./packages/identity-service/
+COPY packages/human-auth/package.json          ./packages/human-auth/
+COPY packages/sdk-js/package.json              ./packages/sdk-js/
+COPY packages/cli/package.json                 ./packages/cli/
+COPY packages/demo-agents/package.json         ./packages/demo-agents/
+COPY packages/aap-claude/package.json          ./packages/aap-claude/
+COPY packages/aap-openai/package.json          ./packages/aap-openai/
+COPY packages/aap-gemini/package.json          ./packages/aap-gemini/
 
 RUN npm ci --ignore-scripts
 
-# Copy source
+# Copy source for packages we actually need to build
 COPY packages/crypto/           ./packages/crypto/
 COPY packages/intent-compiler/  ./packages/intent-compiler/
 COPY packages/registry-server/  ./packages/registry-server/
@@ -26,7 +32,7 @@ COPY packages/audit-server/     ./packages/audit-server/
 COPY packages/identity-service/ ./packages/identity-service/
 COPY packages/human-auth/       ./packages/human-auth/
 
-# Build all packages
+# Build in dependency order
 RUN npm run build --workspace=packages/crypto && \
     npm run build --workspace=packages/intent-compiler && \
     npm run build --workspace=packages/registry-server && \
@@ -39,21 +45,21 @@ RUN npm run build --workspace=packages/crypto && \
 FROM node:20-alpine
 WORKDIR /app
 
-COPY --from=builder /app/node_modules            ./node_modules
-COPY --from=builder /app/packages/crypto/dist    ./packages/crypto/dist
-COPY --from=builder /app/packages/crypto/package.json ./packages/crypto/
-COPY --from=builder /app/packages/intent-compiler/dist   ./packages/intent-compiler/dist
+COPY --from=builder /app/node_modules                        ./node_modules
+COPY --from=builder /app/packages/crypto/dist                ./packages/crypto/dist
+COPY --from=builder /app/packages/crypto/package.json        ./packages/crypto/
+COPY --from=builder /app/packages/intent-compiler/dist       ./packages/intent-compiler/dist
 COPY --from=builder /app/packages/intent-compiler/package.json ./packages/intent-compiler/
-COPY --from=builder /app/packages/registry-server/dist   ./packages/registry-server/dist
+COPY --from=builder /app/packages/registry-server/dist       ./packages/registry-server/dist
 COPY --from=builder /app/packages/registry-server/package.json ./packages/registry-server/
-COPY --from=builder /app/packages/mailbox-server/dist    ./packages/mailbox-server/dist
+COPY --from=builder /app/packages/mailbox-server/dist        ./packages/mailbox-server/dist
 COPY --from=builder /app/packages/mailbox-server/package.json ./packages/mailbox-server/
-COPY --from=builder /app/packages/audit-server/dist      ./packages/audit-server/dist
-COPY --from=builder /app/packages/audit-server/package.json ./packages/audit-server/
-COPY --from=builder /app/packages/identity-service/dist  ./packages/identity-service/dist
+COPY --from=builder /app/packages/audit-server/dist          ./packages/audit-server/dist
+COPY --from=builder /app/packages/audit-server/package.json  ./packages/audit-server/
+COPY --from=builder /app/packages/identity-service/dist      ./packages/identity-service/dist
 COPY --from=builder /app/packages/identity-service/package.json ./packages/identity-service/
-COPY --from=builder /app/packages/human-auth/dist        ./packages/human-auth/dist
-COPY --from=builder /app/packages/human-auth/package.json ./packages/human-auth/
+COPY --from=builder /app/packages/human-auth/dist            ./packages/human-auth/dist
+COPY --from=builder /app/packages/human-auth/package.json    ./packages/human-auth/
 
 COPY start.sh ./start.sh
 RUN chmod +x ./start.sh
