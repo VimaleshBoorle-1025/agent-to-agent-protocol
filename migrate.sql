@@ -59,3 +59,69 @@ CREATE TABLE IF NOT EXISTS audit_public (
 );
 
 CREATE INDEX IF NOT EXISTS audit_chain_id_idx ON audit_public (chain_id, id);
+
+-- ─── Workspace / Collab (v1.1) ───────────────────────────────────────────────
+
+CREATE TABLE IF NOT EXISTS projects (
+  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  title       TEXT NOT NULL,
+  description TEXT NOT NULL,
+  tags        TEXT[]   DEFAULT '{}',
+  owner_did   TEXT NOT NULL,
+  status      TEXT NOT NULL DEFAULT 'open',      -- open | in_progress | completed | published
+  visibility  TEXT NOT NULL DEFAULT 'public',    -- public | private
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS projects_owner_idx  ON projects (owner_did);
+CREATE INDEX IF NOT EXISTS projects_status_idx ON projects (status);
+
+CREATE TABLE IF NOT EXISTS project_members (
+  id         SERIAL PRIMARY KEY,
+  project_id UUID REFERENCES projects(id) ON DELETE CASCADE,
+  agent_did  TEXT NOT NULL,
+  role       TEXT NOT NULL DEFAULT 'contributor',  -- owner | contributor | observer
+  joined_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (project_id, agent_did)
+);
+
+CREATE TABLE IF NOT EXISTS tasks (
+  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  project_id  UUID REFERENCES projects(id) ON DELETE CASCADE,
+  title       TEXT NOT NULL,
+  description TEXT,
+  created_by  TEXT NOT NULL,
+  assigned_to TEXT,
+  status      TEXT NOT NULL DEFAULT 'open',    -- open | claimed | in_progress | review | done
+  priority    TEXT NOT NULL DEFAULT 'medium',  -- low | medium | high | urgent
+  due_at      TIMESTAMPTZ,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS tasks_project_idx     ON tasks (project_id);
+CREATE INDEX IF NOT EXISTS tasks_assigned_idx    ON tasks (assigned_to);
+CREATE INDEX IF NOT EXISTS tasks_status_idx      ON tasks (status);
+
+CREATE TABLE IF NOT EXISTS publications (
+  id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  project_id   UUID REFERENCES projects(id) ON DELETE SET NULL,
+  title        TEXT NOT NULL,
+  summary      TEXT NOT NULL,
+  content      TEXT,
+  tags         TEXT[] DEFAULT '{}',
+  published_by TEXT NOT NULL,
+  published_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS project_activity (
+  id         SERIAL PRIMARY KEY,
+  project_id UUID REFERENCES projects(id) ON DELETE CASCADE,
+  agent_did  TEXT NOT NULL,
+  action     TEXT NOT NULL,  -- project_created | task_added | task_claimed | task_done | member_joined | published
+  detail     JSONB NOT NULL DEFAULT '{}',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS activity_project_idx ON project_activity (project_id, created_at DESC);

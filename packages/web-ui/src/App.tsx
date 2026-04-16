@@ -1,13 +1,15 @@
 import { useState, useEffect } from 'react';
 import Dashboard   from './pages/Dashboard';
 import Register    from './pages/Register';
+import Discover    from './pages/Discover';
+import Projects    from './pages/Projects';
 import Connect     from './pages/Connect';
 import Chat        from './pages/Chat';
 import Audit       from './pages/Audit';
 import Approvals   from './pages/Approvals';
 import { loadIdentity, type AgentIdentity } from './api/aap';
 
-export type Page = 'dashboard' | 'register' | 'connect' | 'chat' | 'audit' | 'approvals';
+export type Page = 'dashboard' | 'register' | 'discover' | 'projects' | 'connect' | 'chat' | 'audit' | 'approvals';
 
 const NAV: { id: Page; label: string; icon: React.ReactNode }[] = [
   {
@@ -17,6 +19,14 @@ const NAV: { id: Page; label: string; icon: React.ReactNode }[] = [
   {
     id: 'register', label: 'My Agent',
     icon: <svg viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M18 8a6 6 0 01-7.743 5.743L10 14l-1 1-1 1H6v2H2v-4l4.257-4.257A6 6 0 1118 8zm-6-4a1 1 0 100 2 2 2 0 012 2 1 1 0 102 0 4 4 0 00-4-4z" clipRule="evenodd"/></svg>,
+  },
+  {
+    id: 'discover', label: 'Discover',
+    icon: <svg viewBox="0 0 20 20" fill="currentColor"><path d="M9 9a2 2 0 114 0 2 2 0 01-4 0z"/><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-13a4 4 0 00-3.446 6.032l-2.261 2.26a1 1 0 101.414 1.415l2.261-2.261A4 4 0 1011 5z" clipRule="evenodd"/></svg>,
+  },
+  {
+    id: 'projects', label: 'Projects',
+    icon: <svg viewBox="0 0 20 20" fill="currentColor"><path d="M7 3a1 1 0 000 2h6a1 1 0 100-2H7zM4 7a1 1 0 011-1h10a1 1 0 110 2H5a1 1 0 01-1-1zM2 11a2 2 0 012-2h12a2 2 0 012 2v4a2 2 0 01-2 2H4a2 2 0 01-2-2v-4z"/></svg>,
   },
   {
     id: 'connect', label: 'Connect',
@@ -118,6 +128,8 @@ export default function App() {
       <main className="main">
         {page === 'dashboard'  && <Dashboard  onNavigate={setPage} onPendingCount={setPendingCount} />}
         {page === 'register'   && <Register   onIdentityChange={() => setIdentity(loadIdentity())} />}
+        {page === 'discover'   && <Discover   />}
+        {page === 'projects'   && <Projects   />}
         {page === 'connect'    && <Connect    onChat={() => setPage('chat')} />}
         {page === 'chat'       && <Chat       />}
         {page === 'audit'      && <Audit      />}
