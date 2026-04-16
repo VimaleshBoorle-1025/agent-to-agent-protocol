@@ -5,6 +5,11 @@ import { hashContent } from '@aap/crypto';
  */
 export const GENESIS_PREV_HASH = '0'.repeat(64);
 
+/** Hash an agent DID for privacy-preserving storage in the audit chain. */
+export function hashAgentDid(did: string): string {
+  return hashContent(did);
+}
+
 /**
  * Compute a single audit chain entry hash.
  *
@@ -36,6 +41,9 @@ export interface AuditEntry {
   content_hash: string;
   created_at?: string;
 }
+
+/** Alias for backward compatibility with tests that import ChainEntry */
+export type ChainEntry = AuditEntry;
 
 export interface VerifyResult {
   valid: boolean;

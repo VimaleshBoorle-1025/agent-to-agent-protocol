@@ -1,4 +1,5 @@
 import { FastifyInstance } from 'fastify';
+import type { SocketStream } from '@fastify/websocket';
 
 /**
  * WebSocket real-time inbox stream.
@@ -11,11 +12,12 @@ export async function streamRoutes(app: FastifyInstance) {
   // In-memory subscriber map: DID → Set of WebSocket connections
   const subscribers = new Map<string, Set<any>>();
 
-  app.get('/messages/inbox/stream', { websocket: true }, (socket, req) => {
+  app.get('/messages/inbox/stream', { websocket: true }, (connection: SocketStream, req) => {
+    const ws = connection.socket;
     const authHeader = req.headers['authorization'] as string | undefined;
     if (!authHeader?.startsWith('DID ')) {
-      socket.send(JSON.stringify({ type: 'ERROR', error: 'UNAUTHORIZED' }));
-      socket.close();
+      ws.send(JSON.stringify({ type: 'ERROR', error: 'UNAUTHORIZED' }));
+      ws.close();
       return;
     }
 
@@ -23,19 +25,19 @@ export async function streamRoutes(app: FastifyInstance) {
     const did = authHeader.slice(4, colonIdx > 4 ? colonIdx : undefined);
 
     if (!did?.startsWith('did:')) {
-      socket.send(JSON.stringify({ type: 'ERROR', error: 'INVALID_DID' }));
-      socket.close();
+      ws.send(JSON.stringify({ type: 'ERROR', error: 'INVALID_DID' }));
+      ws.close();
       return;
     }
 
     // Register subscriber
     if (!subscribers.has(did)) subscribers.set(did, new Set());
-    subscribers.get(did)!.add(socket);
+    subscribers.get(did)!.add(ws);
 
-    socket.send(JSON.stringify({ type: 'CONNECTED', did, message: 'Inbox stream active' }));
+    ws.send(JSON.stringify({ type: 'CONNECTED', did, message: 'Inbox stream active' }));
 
-    socket.on('close', () => {
-      subscribers.get(did)?.delete(socket);
+    ws.on('close', () => {
+      subscribers.get(did)?.delete(ws);
       if (subscribers.get(did)?.size === 0) subscribers.delete(did);
     });
   });

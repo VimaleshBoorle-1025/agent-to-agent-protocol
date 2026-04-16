@@ -8,66 +8,59 @@ import { FastifyInstance } from 'fastify';
 import { computeEntryHash, verifyChain, hashAgentDid, ChainEntry } from '../src/chain/integrity';
 
 // ─── Mock DB ─────────────────────────────────────────────────────────────────
+// Factory must be self-contained — jest.mock is hoisted before variable declarations.
 
-const chainStore: ChainEntry[] = [];
+jest.mock('../src/db/client', () => {
+  const store: any[] = [];
+  let seq = 1;
+
+  const db = {
+    _store: store,
+    _resetSeq: () => { seq = 1; },
+    query: jest.fn(async (sql: string, params?: any[]) => {
+      if (sql.includes('ORDER BY id DESC LIMIT 1')) {
+        const last = store[store.length - 1];
+        return { rows: last ? [last] : [] };
+      }
+      if (sql.includes('INSERT INTO audit_public')) {
+        const [chain_id, entry_hash, prev_hash, agent_did_hash, action_type, outcome, timestamp, content_hash] = params!;
+        const entry = { id: seq++, chain_id, entry_hash, prev_hash, agent_did_hash, action_type, outcome, timestamp, content_hash };
+        store.push(entry);
+        return { rows: [entry] };
+      }
+      if (sql.includes('ORDER BY id ASC') && !sql.includes('agent_did_hash')) {
+        return { rows: [...store] };
+      }
+      if (sql.includes('WHERE id = $1')) {
+        return { rows: store.filter(e => e.id === parseInt(params![0])) };
+      }
+      if (sql.includes('agent_did_hash = $1')) {
+        return { rows: store.filter(e => e.agent_did_hash === params![0]) };
+      }
+      if (sql.includes('LIMIT') && sql.includes('OFFSET')) {
+        const limit = params![0] ?? 50;
+        const offset = params![1] ?? 0;
+        return { rows: store.slice(offset, offset + limit) };
+      }
+      return { rows: [] };
+    }),
+  };
+  return { db };
+});
+
+import { db as mockDb } from '../src/db/client';
+
+// Convenience references for tests that directly manipulate the store
+const chainStore: ChainEntry[] = (mockDb as any)._store;
 let idSeq = 1;
-
-const mockDb = {
-  query: jest.fn(async (sql: string, params?: any[]) => {
-    // Get last entry (for prev_hash)
-    if (sql.includes('ORDER BY id DESC LIMIT 1')) {
-      const last = chainStore[chainStore.length - 1];
-      return { rows: last ? [last] : [] };
-    }
-
-    // INSERT
-    if (sql.includes('INSERT INTO audit_public')) {
-      const [chain_id, entry_hash, prev_hash, agent_did_hash, action_type, outcome, timestamp, content_hash] = params!;
-      const entry: ChainEntry = {
-        id: idSeq++, chain_id, entry_hash, prev_hash,
-        agent_did_hash, action_type, outcome, timestamp, content_hash,
-      };
-      chainStore.push(entry);
-      return { rows: [entry] };
-    }
-
-    // SELECT all (for verify)
-    if (sql.includes('ORDER BY id ASC') && !sql.includes('agent_did_hash')) {
-      return { rows: [...chainStore] };
-    }
-
-    // SELECT by id
-    if (sql.includes('WHERE id = $1')) {
-      const id = params![0];
-      return { rows: chainStore.filter(e => e.id === parseInt(id)) };
-    }
-
-    // SELECT by agent_did_hash
-    if (sql.includes('agent_did_hash = $1')) {
-      const hash = params![0];
-      return { rows: chainStore.filter(e => e.agent_did_hash === hash) };
-    }
-
-    // SELECT paginated
-    if (sql.includes('LIMIT') && sql.includes('OFFSET')) {
-      const limit  = params![0] ?? 50;
-      const offset = params![1] ?? 0;
-      return { rows: chainStore.slice(offset, offset + limit) };
-    }
-
-    return { rows: [] };
-  }),
-};
-
-jest.mock('../src/db/client', () => ({ db: mockDb }));
 
 // ─── Tests ───────────────────────────────────────────────────────────────────
 
 describe('Audit Chain Integrity Logic', () => {
   beforeEach(() => {
     chainStore.length = 0;
-    idSeq = 1;
-    mockDb.query.mockClear();
+    if ((mockDb as any)._resetSeq) (mockDb as any)._resetSeq();
+    ((mockDb as any).query as jest.Mock).mockClear();
   });
 
   test('computeEntryHash is deterministic', () => {
@@ -153,7 +146,7 @@ describe('Audit REST API', () => {
   beforeEach(async () => {
     chainStore.length = 0;
     idSeq = 1;
-    mockDb.query.mockClear();
+    ((mockDb as any).query as jest.Mock).mockClear();
     app = await buildApp({ testMode: true });
   });
 

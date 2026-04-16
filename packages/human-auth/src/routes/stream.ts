@@ -7,13 +7,14 @@ import { FastifyInstance } from 'fastify';
 import { approvalQueue } from '../queue';
 
 export async function streamRoutes(app: FastifyInstance) {
-  app.get('/v1/authorize/stream', { websocket: true }, (socket) => {
+  app.get('/v1/authorize/stream', { websocket: true }, (connection) => {
+    const ws = connection.socket;
     const unsub = approvalQueue.subscribe((request) => {
-      if (socket.readyState === 1 /* OPEN */) {
-        socket.send(JSON.stringify({ type: 'APPROVAL_REQUESTED', data: request }));
+      if (ws.readyState === 1 /* OPEN */) {
+        ws.send(JSON.stringify({ type: 'APPROVAL_REQUESTED', data: request }));
       }
     });
 
-    socket.on('close', () => unsub());
+    ws.on('close', () => unsub());
   });
 }

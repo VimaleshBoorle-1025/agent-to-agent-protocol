@@ -36,10 +36,10 @@ export function kyberKeyPair(): KyberKeyPair {
  */
 export function kyberEncapsulate(recipientPublicKeyHex: string): KyberEncapsulation {
   const publicKey = hexToBytes(recipientPublicKeyHex);
-  const { ciphertext, sharedSecret } = ml_kem768.encapsulate(publicKey);
+  const { cipherText, sharedSecret } = ml_kem768.encapsulate(publicKey);
   return {
-    ciphertext,
-    ciphertextHex:   bytesToHex(ciphertext),
+    ciphertext:      cipherText,
+    ciphertextHex:   bytesToHex(cipherText),
     sharedSecret,
     sharedSecretHex: bytesToHex(sharedSecret),
   };

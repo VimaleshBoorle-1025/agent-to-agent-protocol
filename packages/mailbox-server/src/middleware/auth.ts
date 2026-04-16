@@ -20,17 +20,13 @@ export async function authenticateDID(
     return null;
   }
 
-  const [, didAndSig] = authHeader.split('DID ');
-  const colonIdx = didAndSig.indexOf(':');
-  if (colonIdx === -1) {
-    reply.code(401).send({ error: 'UNAUTHORIZED: malformed DID auth header' });
-    return null;
-  }
+  // Format: "DID <did> <signature>"  (space-separated, not colon, because DID contains colons)
+  const rest = authHeader.slice(4); // strip "DID "
+  const spaceIdx = rest.indexOf(' ');
+  const did       = spaceIdx === -1 ? rest : rest.slice(0, spaceIdx);
+  const signature = spaceIdx === -1 ? '' : rest.slice(spaceIdx + 1);
 
-  const did       = didAndSig.slice(0, colonIdx);
-  const signature = didAndSig.slice(colonIdx + 1);
-
-  if (!testMode && signature) {
+  if (!testMode && signature !== '') {
     // Production: verify signature against registry public key
     // TODO: fetch public key from registry and verify with @aap/crypto verify()
     // For now, accept any valid DID format
