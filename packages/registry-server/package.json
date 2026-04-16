@@ -7,13 +7,16 @@
     "dev": "ts-node-dev --respawn src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
-    "test": "jest"
+    "test": "jest --coverage"
   },
   "dependencies": {
+    "@aap/crypto": "^1.0.0",
     "fastify": "^4.26.0",
     "@fastify/cors": "^9.0.0",
     "@fastify/rate-limit": "^9.1.0",
+    "@fastify/websocket": "^8.3.0",
     "pg": "^8.11.0",
+    "twilio": "^5.0.0",
     "uuid": "^9.0.0",
     "dotenv": "^16.4.0"
   },
