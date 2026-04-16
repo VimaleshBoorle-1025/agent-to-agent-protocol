@@ -117,7 +117,7 @@ aap send aap://demo.echo '{"action_type":"PING"}'
 
 | Week | Milestone |
 |---|---|
-| 1 | Registry server + DID generation + phone verification |
+| 1 | Registry server + DID generation + cryptographic identity |
 | 2 | Dilithium3 handshake + Kyber768 key exchange + encrypted tunnel |
 | 3 | Mailbox service + offline delivery + WebSocket stream |
 | 4 | Intent Compiler + capability manifest enforcement |

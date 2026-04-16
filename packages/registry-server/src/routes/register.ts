@@ -10,7 +10,6 @@ interface RegisterBody {
   endpoint_url:    string;
   capabilities:    string[];
   owner_type:      'human' | 'entity';
-  phone_otp_token?: string;
   timestamp:       number;
   nonce:           string;
   signature:       string;  // ed25519/dilithium3 sign(entire body minus signature)
@@ -21,7 +20,7 @@ export async function registerRoutes(app: FastifyInstance) {
   // POST /v1/register
   app.post<{ Body: RegisterBody }>('/register', async (req, reply) => {
     const { aap_address, public_key_hex, endpoint_url, capabilities,
-            owner_type, phone_otp_token, timestamp, nonce, signature } = req.body;
+            owner_type, timestamp, nonce, signature } = req.body;
 
     // 1. Validate aap:// address format
     if (!validateAAPAddress(aap_address)) {
@@ -56,22 +55,8 @@ export async function registerRoutes(app: FastifyInstance) {
       return reply.code(409).send({ error: 'ADDRESS_TAKEN: aap:// address already registered' });
     }
 
-    // 6. Determine verification level from OTP token
-    let verificationLevel = 'unverified';
-    if (phone_otp_token) {
-      const otpCheck = await db.query(
-        `SELECT 1 FROM pending_verifications
-         WHERE otp_token = $1 AND expires_at > NOW() AND used = false`,
-        [phone_otp_token]
-      );
-      if (otpCheck.rows.length > 0) {
-        verificationLevel = 'personal_verified';
-        await db.query(
-          'UPDATE pending_verifications SET used = true WHERE otp_token = $1',
-          [phone_otp_token]
-        );
-      }
-    }
+    // 6. All new agents start unverified — trust is earned via audit chain history
+    const verificationLevel = 'unverified';
 
     // 7. Build DID
     const did = `did:aap:${uuidv4().replace(/-/g, '')}`;

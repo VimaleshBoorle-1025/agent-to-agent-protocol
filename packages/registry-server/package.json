@@ -16,7 +16,6 @@
     "@fastify/rate-limit": "^9.1.0",
     "@fastify/websocket": "^8.3.0",
     "pg": "^8.11.0",
-    "twilio": "^5.0.0",
     "uuid": "^9.0.0",
     "dotenv": "^16.4.0"
   },
