@@ -1,0 +1,17 @@
+{
+  "name": "@aap/intent-compiler",
+  "version": "1.0.0",
+  "description": "AAP Intent Compiler — security boundary between AI brain and protocol",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "jest"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0",
+    "jest": "^29.0.0",
+    "@types/jest": "^29.0.0",
+    "ts-jest": "^29.0.0"
+  }
+}

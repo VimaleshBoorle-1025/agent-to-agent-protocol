@@ -1,0 +1,27 @@
+{
+  "name": "aap",
+  "version": "1.0.0",
+  "description": "Agent Authentication Protocol — universal communication standard for AI agents",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present",
+    "dev:registry": "npm run dev --workspace=packages/registry-server",
+    "dev:mailbox": "npm run dev --workspace=packages/mailbox-server",
+    "dev:audit": "npm run dev --workspace=packages/audit-server",
+    "dev:identity": "npm run dev --workspace=packages/identity-service"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0",
+    "@types/node": "^20.0.0",
+    "prettier": "^3.2.0",
+    "eslint": "^8.57.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

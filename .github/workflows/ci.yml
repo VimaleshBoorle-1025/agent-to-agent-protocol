@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test-intent-compiler:
+    name: Test Intent Compiler
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci --workspace=packages/intent-compiler
+      - run: npm test --workspace=packages/intent-compiler
+
+  test-sdk-js:
+    name: Test JS SDK
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci --workspace=packages/sdk-js
+      - run: npm test --workspace=packages/sdk-js
+
+  test-sdk-python:
+    name: Test Python SDK
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install -e "packages/sdk-python[dev]"
+      - run: pytest packages/sdk-python/tests -v
