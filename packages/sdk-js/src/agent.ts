@@ -6,6 +6,8 @@ import {
   sign,
   generateNonce,
   validateTimestamp,
+  dilithium3KeyPair,
+  dilithium3Sign,
 } from '@aap/crypto';
 
 export class AAPAgent {
@@ -27,8 +29,9 @@ export class AAPAgent {
    * and publishes the aap:// address.
    */
   async register(): Promise<AgentIdentity> {
-    // Generate real Ed25519 key pair
-    const kp = generateKeyPair();
+    // Generate key pair — Ed25519 (default) or Dilithium3 (post-quantum)
+    const algo = this.config.signatureAlgorithm ?? 'ed25519';
+    const kp = algo === 'dilithium3' ? dilithium3KeyPair() : generateKeyPair();
     this.privateKeyHex = kp.privateKeyHex;
 
     const aap_address  = `aap://${this.config.name}`;
@@ -47,9 +50,11 @@ export class AAPAgent {
       nonce,
     };
 
-    // Sign the body with the private key
+    // Sign the body with the chosen algorithm
     const messageBytes = new TextEncoder().encode(JSON.stringify(bodyToSign));
-    const signature    = sign(messageBytes, kp.privateKeyHex);
+    const signature = algo === 'dilithium3'
+      ? dilithium3Sign(messageBytes, kp.privateKeyHex)
+      : sign(messageBytes, kp.privateKeyHex);
 
     const response = await fetch(`${this.registryUrl}/v1/register`, {
       method:  'POST',

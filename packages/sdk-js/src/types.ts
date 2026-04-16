@@ -6,6 +6,8 @@ export interface AAPAgentConfig {
   onMessage?: MessageHandler;
   registryUrl?: string;
   keyStorePath?: string;
+  /** 'ed25519' (default, fast) or 'dilithium3' (post-quantum, larger keys) */
+  signatureAlgorithm?: 'ed25519' | 'dilithium3';
 }
 
 export interface AAPMessage {
