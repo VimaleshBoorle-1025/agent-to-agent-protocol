@@ -1,0 +1,26 @@
+{
+  "name": "@aap/demo-agents",
+  "version": "1.0.0",
+  "description": "Live demo AAP agents — echo, weather stub, finance stub",
+  "private": true,
+  "main": "dist/server.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "dev": "ts-node src/server.ts",
+    "test": "jest --coverage"
+  },
+  "dependencies": {
+    "aap-sdk": "^1.0.0",
+    "fastify": "^4.26.0",
+    "@fastify/websocket": "^8.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.4.0",
+    "ts-node": "^10.9.0",
+    "jest": "^29.0.0",
+    "@types/jest": "^29.0.0",
+    "ts-jest": "^29.0.0"
+  }
+}

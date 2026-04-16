@@ -1,6 +1,7 @@
 import { sha256 } from '@noble/hashes/sha256';
 import { hkdf } from '@noble/hashes/hkdf';
 import { randomBytes } from '@noble/hashes/utils';
+import { createCipheriv, createDecipheriv } from 'crypto';
 
 export function bytesToHex(bytes: Uint8Array): string {
   return Array.from(bytes)
@@ -55,6 +56,40 @@ export function deriveSessionKey(
   const infoBytes = new TextEncoder().encode(info);
   const key  = hkdf(sha256, ikm, saltBytes, infoBytes, 32);
   return bytesToHex(key);
+}
+
+/**
+ * Encrypt arbitrary data with AES-256-GCM.
+ * Returns "iv:ciphertext:authTag" — all hex encoded.
+ * keyHex must be 64 hex characters (32 bytes).
+ */
+export function encryptAES(plaintext: string, keyHex: string): string {
+  const key = hexToBytes(keyHex.slice(0, 64));
+  const iv  = randomBytes(12); // 96-bit IV for GCM
+  const cipher = createCipheriv('aes-256-gcm', key, iv);
+  const encrypted = Buffer.concat([
+    cipher.update(plaintext, 'utf8'),
+    cipher.final(),
+  ]);
+  const authTag = cipher.getAuthTag();
+  return `${bytesToHex(iv)}:${encrypted.toString('hex')}:${authTag.toString('hex')}`;
+}
+
+/**
+ * Decrypt AES-256-GCM ciphertext.
+ * Expects "iv:ciphertext:authTag" format from encryptAES.
+ */
+export function decryptAES(ciphertext: string, keyHex: string): string {
+  const parts = ciphertext.split(':');
+  if (parts.length !== 3) throw new Error('Invalid AES ciphertext format');
+  const [ivHex, ctHex, tagHex] = parts;
+  const key    = hexToBytes(keyHex.slice(0, 64));
+  const iv     = hexToBytes(ivHex);
+  const ct     = Buffer.from(ctHex, 'hex');
+  const tag    = Buffer.from(tagHex, 'hex');
+  const decipher = createDecipheriv('aes-256-gcm', key, iv);
+  decipher.setAuthTag(tag);
+  return decipher.update(ct) + decipher.final('utf8');
 }
 
 /**

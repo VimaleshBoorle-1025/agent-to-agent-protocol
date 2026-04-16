@@ -1,6 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
 import { OuterEnvelope, MiddleEnvelope, InnerEnvelope } from './types';
-import { generateNonce, hashContent, bytesToHex, hexToBytes } from './utils';
+import { generateNonce, hashContent, bytesToHex, hexToBytes, encryptAES, decryptAES } from './utils';
 import { sign, verify } from './ed25519';
 
 const AAP_VERSION = '1.0';
@@ -8,14 +8,18 @@ const MESSAGE_TTL = 30;
 
 /**
  * Build the outer envelope (visible to routing infrastructure).
- * Signs the entire outer envelope with the sender's private key.
+ * middle envelope is AES-256-GCM encrypted with sessionKey when provided.
+ * Outer envelope is signed with sender's Ed25519 private key.
  */
 export function buildOuterEnvelope(
   fromDid: string,
   toDid: string,
   encryptedMiddle: string,
-  privateKeyHex: string
+  privateKeyHex: string,
+  sessionKey?: string
 ): OuterEnvelope {
+  const middle = sessionKey ? encryptAES(encryptedMiddle, sessionKey) : encryptedMiddle;
+
   const partial: Omit<OuterEnvelope, 'outer_signature'> = {
     aap_version:               AAP_VERSION,
     from_did:                  fromDid,
@@ -24,7 +28,7 @@ export function buildOuterEnvelope(
     timestamp:                 Date.now(),
     nonce:                     generateNonce(),
     ttl:                       MESSAGE_TTL,
-    middle_envelope_encrypted: encryptedMiddle,
+    middle_envelope_encrypted: middle,
   };
 
   const signatureInput = new TextEncoder().encode(JSON.stringify(partial));
@@ -34,20 +38,23 @@ export function buildOuterEnvelope(
 }
 
 /**
- * Build the middle envelope (encrypted with receiver's public key).
+ * Build the middle envelope (encrypted with session key when provided).
  * Contains action type and capability token.
  */
 export function buildMiddleEnvelope(
   actionType: string,
   capabilityToken: string,
   encryptedInner: string,
-  privateKeyHex: string
+  privateKeyHex: string,
+  sessionKey?: string
 ): MiddleEnvelope {
+  const inner = sessionKey ? encryptAES(encryptedInner, sessionKey) : encryptedInner;
+
   const partial = {
     action_type:              actionType,
     capability_token:         capabilityToken,
     schema_version:           '1.0',
-    inner_envelope_encrypted: encryptedInner,
+    inner_envelope_encrypted: inner,
   };
 
   const signatureInput = new TextEncoder().encode(JSON.stringify(partial));
@@ -57,8 +64,8 @@ export function buildMiddleEnvelope(
 }
 
 /**
- * Build the inner envelope (encrypted with session key).
- * Contains the actual typed parameters.
+ * Build the inner envelope (contains actual typed parameters).
+ * Serialized as JSON before being passed to buildMiddleEnvelope for encryption.
  */
 export function buildInnerEnvelope(parameters: Record<string, unknown>): InnerEnvelope {
   return { parameters };
@@ -66,12 +73,14 @@ export function buildInnerEnvelope(parameters: Record<string, unknown>): InnerEn
 
 /**
  * Verify and parse an outer envelope.
+ * If sessionKey provided, decrypts the middle envelope after signature check.
  * Returns null if signature is invalid or timestamp is outside window.
  */
 export function parseEnvelope(
   envelope: OuterEnvelope,
-  senderPublicKeyHex: string
-): { valid: boolean; reason?: string } {
+  senderPublicKeyHex: string,
+  sessionKey?: string
+): { valid: boolean; reason?: string; decryptedMiddle?: string } {
   // Verify timestamp
   const diff = Math.abs(Date.now() - envelope.timestamp);
   if (diff > 30_000) {
@@ -84,6 +93,16 @@ export function parseEnvelope(
   const isValid = verify(signatureInput, outer_signature, senderPublicKeyHex);
   if (!isValid) {
     return { valid: false, reason: 'INVALID_SIGNATURE' };
+  }
+
+  // Optionally decrypt middle envelope
+  if (sessionKey) {
+    try {
+      const decryptedMiddle = decryptAES(envelope.middle_envelope_encrypted, sessionKey);
+      return { valid: true, decryptedMiddle };
+    } catch {
+      return { valid: false, reason: 'DECRYPTION_FAILED' };
+    }
   }
 
   return { valid: true };

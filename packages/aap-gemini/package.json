@@ -1,0 +1,28 @@
+{
+  "name": "aap-gemini",
+  "version": "1.0.0",
+  "description": "AAP wrapper for Google Gemini — 3 lines to make Gemini AAP-compliant",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "jest --coverage",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": ["aap", "gemini", "google", "agent", "protocol"],
+  "license": "MIT",
+  "dependencies": {
+    "aap-sdk": "^1.0.0",
+    "@google/generative-ai": "^0.3.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.4.0",
+    "jest": "^29.0.0",
+    "@types/jest": "^29.0.0",
+    "ts-jest": "^29.0.0"
+  },
+  "peerDependencies": {
+    "@google/generative-ai": ">=0.3.0"
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "name": "aap-openai",
+  "version": "1.0.0",
+  "description": "AAP wrapper for OpenAI GPT — 3 lines to make GPT AAP-compliant",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "jest --coverage",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": ["aap", "openai", "gpt", "agent", "protocol"],
+  "license": "MIT",
+  "dependencies": {
+    "aap-sdk": "^1.0.0",
+    "openai": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.4.0",
+    "jest": "^29.0.0",
+    "@types/jest": "^29.0.0",
+    "ts-jest": "^29.0.0"
+  },
+  "peerDependencies": {
+    "openai": ">=4.0.0"
+  }
+}

@@ -130,16 +130,17 @@ export class AAPSession {
       if (!compiled.success) throw new Error(`Intent Compiler rejected: ${compiled.error}`);
     }
 
-    // Build three-envelope message
+    // Build three-envelope message (inner → middle → outer, each encrypted with session key)
     const innerEnv  = buildInnerEnvelope(payload);
     const middleEnv = buildMiddleEnvelope(
-      action, '', JSON.stringify(innerEnv), this.localPrivateKeyHex
+      action, '', JSON.stringify(innerEnv), this.localPrivateKeyHex, this.sessionKey
     );
     const outerEnv  = buildOuterEnvelope(
       this.localIdentity.did,
       (this.remoteIdentity?.id as string) ?? this.remoteAddress,
       JSON.stringify(middleEnv),
-      this.localPrivateKeyHex
+      this.localPrivateKeyHex,
+      this.sessionKey
     );
 
     // Send to remote endpoint if available

@@ -13,7 +13,12 @@
     "dev:registry": "npm run dev --workspace=packages/registry-server",
     "dev:mailbox": "npm run dev --workspace=packages/mailbox-server",
     "dev:audit": "npm run dev --workspace=packages/audit-server",
-    "dev:identity": "npm run dev --workspace=packages/identity-service"
+    "dev:identity": "npm run dev --workspace=packages/identity-service",
+    "dev:human-auth": "npm run dev --workspace=packages/human-auth",
+    "dev:demo": "npm run dev --workspace=packages/demo-agents",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down",
+    "docker:logs": "docker compose logs -f"
   },
   "devDependencies": {
     "typescript": "^5.4.0",
