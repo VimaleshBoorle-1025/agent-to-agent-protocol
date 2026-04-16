@@ -1,7 +1,21 @@
 /**
  * AAP API client — thin wrappers around the backend services.
- * All calls proxy through Vite dev server to avoid CORS issues.
+ * In dev: proxied through Vite to localhost services.
+ * In production: calls live Railway URLs directly (set via VITE_* env vars).
  */
+
+const REGISTRY = (import.meta as any).env?.VITE_REGISTRY_URL || '';
+const MAILBOX  = (import.meta as any).env?.VITE_MAILBOX_URL  || '';
+const AUDIT    = (import.meta as any).env?.VITE_AUDIT_URL    || '';
+
+// In dev: use proxy prefix (/api/registry → localhost:3001)
+// In prod: use the full Railway URL directly
+const api = {
+  registry: REGISTRY || '/api/registry',
+  mailbox:  MAILBOX  || '/api/mailbox',
+  audit:    AUDIT    || '/api/audit',
+  auth:     '/api/auth',
+};
 
 export interface AgentIdentity {
   did: string;
@@ -107,7 +121,7 @@ export async function registerAgent(name: string): Promise<AgentIdentity> {
 
   const signature = await signPayload(bodyToSign, kp.privateKeyHex);
 
-  const res = await fetch('/api/registry/v1/register', {
+  const res = await fetch(`${api.registry}/v1/register`, {
     method:  'POST',
     headers: { 'Content-Type': 'application/json' },
     body:    JSON.stringify({ ...bodyToSign, signature }),
@@ -133,13 +147,13 @@ export async function registerAgent(name: string): Promise<AgentIdentity> {
 
 export async function lookupAgent(address: string) {
   const encoded = encodeURIComponent(address);
-  const res = await fetch(`/api/registry/v1/lookup/${encoded}`);
+  const res = await fetch(`${api.registry}/v1/lookup/${encoded}`);
   if (!res.ok) throw new Error(`Agent not found: ${address}`);
   return res.json();
 }
 
 export async function getTrustScore(did: string): Promise<TrustInfo> {
-  const res = await fetch(`/api/registry/v1/agent/${encodeURIComponent(did)}/trust`);
+  const res = await fetch(`${api.registry}/v1/agent/${encodeURIComponent(did)}/trust`);
   if (!res.ok) throw new Error('Could not fetch trust score');
   return res.json();
 }
@@ -152,7 +166,7 @@ export async function sendMessage(payload: {
   action_type: string;
   content: Record<string, unknown>;
 }) {
-  const res = await fetch('/api/mailbox/v1/messages/send', {
+  const res = await fetch(`${api.mailbox}/v1/messages/send`, {
     method:  'POST',
     headers: { 'Content-Type': 'application/json' },
     body:    JSON.stringify(payload),
@@ -162,7 +176,7 @@ export async function sendMessage(payload: {
 }
 
 export async function getInbox(did: string): Promise<{ messages: unknown[] }> {
-  const res = await fetch(`/api/mailbox/v1/messages/inbox?did=${encodeURIComponent(did)}`);
+  const res = await fetch(`${api.mailbox}/v1/messages/inbox?did=${encodeURIComponent(did)}`);
   if (!res.ok) return { messages: [] };
   return res.json();
 }
@@ -170,13 +184,13 @@ export async function getInbox(did: string): Promise<{ messages: unknown[] }> {
 // ─── Audit chain ─────────────────────────────────────────────────────────────
 
 export async function getAuditChain(limit = 50, offset = 0): Promise<{ entries: AuditEntry[] }> {
-  const res = await fetch(`/api/audit/v1/audit/chain?limit=${limit}&offset=${offset}`);
+  const res = await fetch(`${api.audit}/v1/audit/chain?limit=${limit}&offset=${offset}`);
   if (!res.ok) return { entries: [] };
   return res.json();
 }
 
 export async function verifyChain(): Promise<{ valid: boolean; length: number; broken_at?: number }> {
-  const res = await fetch('/api/audit/v1/audit/verify');
+  const res = await fetch(`${api.audit}/v1/audit/verify`);
   if (!res.ok) return { valid: false, length: 0 };
   return res.json();
 }
