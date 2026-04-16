@@ -1,0 +1,51 @@
+import { FastifyInstance } from 'fastify';
+
+/**
+ * WebSocket real-time inbox stream.
+ * Client connects with Authorization header; server pushes NEW_MESSAGE events
+ * whenever a message arrives for their DID.
+ *
+ * Message format: { type: 'NEW_MESSAGE', message_id: string, from_did: string }
+ */
+export async function streamRoutes(app: FastifyInstance) {
+  // In-memory subscriber map: DID → Set of WebSocket connections
+  const subscribers = new Map<string, Set<any>>();
+
+  app.get('/messages/inbox/stream', { websocket: true }, (socket, req) => {
+    const authHeader = req.headers['authorization'] as string | undefined;
+    if (!authHeader?.startsWith('DID ')) {
+      socket.send(JSON.stringify({ type: 'ERROR', error: 'UNAUTHORIZED' }));
+      socket.close();
+      return;
+    }
+
+    const colonIdx = authHeader.indexOf(':', 4);
+    const did = authHeader.slice(4, colonIdx > 4 ? colonIdx : undefined);
+
+    if (!did?.startsWith('did:')) {
+      socket.send(JSON.stringify({ type: 'ERROR', error: 'INVALID_DID' }));
+      socket.close();
+      return;
+    }
+
+    // Register subscriber
+    if (!subscribers.has(did)) subscribers.set(did, new Set());
+    subscribers.get(did)!.add(socket);
+
+    socket.send(JSON.stringify({ type: 'CONNECTED', did, message: 'Inbox stream active' }));
+
+    socket.on('close', () => {
+      subscribers.get(did)?.delete(socket);
+      if (subscribers.get(did)?.size === 0) subscribers.delete(did);
+    });
+  });
+
+  // Export notifier so message routes can call it on new message
+  (app as any).notifyInbox = (to_did: string, event: object) => {
+    const sockets = subscribers.get(to_did);
+    if (sockets) {
+      const payload = JSON.stringify(event);
+      sockets.forEach(s => { try { s.send(payload); } catch {} });
+    }
+  };
+}
