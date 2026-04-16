@@ -1,17 +1,16 @@
 import { AAPOpenAI } from '../src/index';
 
 jest.mock('openai', () => {
-  return {
-    default: jest.fn().mockImplementation(() => ({
-      chat: {
-        completions: {
-          create: jest.fn().mockResolvedValue({
-            choices: [{ message: { content: '{"action_type":"PING","parameters":{}}' } }],
-          }),
-        },
+  const MockOpenAI = jest.fn().mockImplementation(() => ({
+    chat: {
+      completions: {
+        create: jest.fn().mockResolvedValue({
+          choices: [{ message: { content: '{"action_type":"PING","parameters":{}}' } }],
+        }),
       },
-    })),
-  };
+    },
+  }));
+  return { __esModule: true, default: MockOpenAI };
 });
 
 jest.mock('aap-sdk', () => ({

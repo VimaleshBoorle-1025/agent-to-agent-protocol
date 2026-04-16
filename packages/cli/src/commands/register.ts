@@ -63,6 +63,7 @@ export async function registerCommand(opts: { name?: string; force?: boolean }) 
     if (!res.ok) {
       const err = await res.json() as { error: string };
       stepFail(regSpin, `Registration failed: ${err.error}`);
+      fail(`Registration failed: ${err.error}`);
       return;
     }
 

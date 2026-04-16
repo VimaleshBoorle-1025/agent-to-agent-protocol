@@ -1,15 +1,13 @@
 import { AAPClaude } from '../src/index';
 
 jest.mock('@anthropic-ai/sdk', () => {
-  return {
-    default: jest.fn().mockImplementation(() => ({
-      messages: {
-        create: jest.fn().mockResolvedValue({
-          content: [{ type: 'text', text: '{"action_type":"PING","parameters":{"from":"test"}}' }],
-        }),
-      },
-    })),
-  };
+  const mockCreate = jest.fn().mockResolvedValue({
+    content: [{ type: 'text', text: '{"action_type":"PING","parameters":{"from":"test"}}' }],
+  });
+  const MockAnthropic = jest.fn().mockImplementation(() => ({
+    messages: { create: mockCreate },
+  }));
+  return { __esModule: true, default: MockAnthropic };
 });
 
 jest.mock('aap-sdk', () => ({

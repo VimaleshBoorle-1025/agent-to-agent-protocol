@@ -97,15 +97,33 @@ export class AAPAgent {
    * Returns a default L2 task manifest for the configured capabilities.
    */
   getCapabilityManifest() {
+    const caps = this.config.capabilities?.map(c => c.toString()) ?? [];
+
+    // Always include PING + DISCONNECT + ERROR as baseline
+    const base = new Set(['PING', 'PONG', 'DISCONNECT', 'ERROR', ...caps]);
+
+    // Auto-include paired response actions
+    const pairs: Record<string, string> = {
+      REQUEST_DATA:        'RETURN_DATA',
+      REQUEST_QUOTE:       'RETURN_QUOTE',
+      DELEGATE_TASK:       'TASK_RESULT',
+      PROPOSE_TRANSACTION: 'ACCEPT_TRANSACTION',
+      REQUEST_HUMAN_AUTH:  'HUMAN_AUTH_RESPONSE',
+      HANDSHAKE_INIT:      'HANDSHAKE_RESPONSE',
+    };
+    for (const [req, res] of Object.entries(pairs)) {
+      if (base.has(req)) base.add(res);
+    }
+
     return {
-      agent_did:          this.identity?.did ?? '',
+      agent_did:          this.identity?.did ?? `did:aap:${this.config.name}`,
       level:              2,
-      allowed_actions:    this.config.capabilities?.map(c => c.toString()) ?? ['PING', 'REQUEST_DATA'],
+      allowed_actions:    Array.from(base),
       denied_actions:     [],
       allowed_data_types: [],
       denied_data_types:  [],
       approved_agents:    [],
-      expires_at:         new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // 24h
+      expires_at:         new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
     };
   }
 

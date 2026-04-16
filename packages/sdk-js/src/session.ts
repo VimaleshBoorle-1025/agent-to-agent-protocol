@@ -29,12 +29,14 @@ export class AAPSession {
     localIdentity: AgentIdentity,
     localPrivateKeyHex: string,
     remoteAddress: string,
-    registryUrl: string
+    registryUrl: string,
+    manifest?: CapabilityManifest
   ) {
-    this.localIdentity    = localIdentity;
+    this.localIdentity      = localIdentity;
     this.localPrivateKeyHex = localPrivateKeyHex;
-    this.remoteAddress    = remoteAddress;
-    this.registryUrl      = registryUrl;
+    this.remoteAddress      = remoteAddress;
+    this.registryUrl        = registryUrl;
+    if (manifest) this.manifest = manifest;
   }
 
   /**
@@ -53,8 +55,22 @@ export class AAPSession {
     if (!response.ok) throw new Error(`Agent not found: ${this.remoteAddress}`);
     this.remoteIdentity = await response.json() as Record<string, unknown>;
 
-    const remotePublicKeyHex = (this.remoteIdentity.verificationMethod as any)?.[0]?.publicKeyHex as string;
+    // Support both DID document format (verificationMethod) and flat registry format (public_key_hex)
+    const remotePublicKeyHex = (
+      (this.remoteIdentity.verificationMethod as any)?.[0]?.publicKeyHex ??
+      (this.remoteIdentity.public_key_hex as string)
+    ) as string;
     if (!remotePublicKeyHex) throw new Error('Remote agent has no public key in DID document');
+
+    // 2. Verify DID document signature if present
+    const didSignature = this.remoteIdentity.did_signature as string | undefined;
+    if (didSignature) {
+      const didDoc = { ...this.remoteIdentity };
+      delete (didDoc as any).did_signature;
+      const docBytes = new TextEncoder().encode(JSON.stringify(didDoc));
+      const isValid  = verify(docBytes, didSignature, remotePublicKeyHex);
+      if (!isValid) throw new Error('DID document signature is invalid');
+    }
 
     // 2. Generate Kyber768 KEM key pair for this session
     const kyberKP  = kyberKeyPair();
@@ -81,7 +97,10 @@ export class AAPSession {
     );
 
     // 4. Send to remote endpoint (if available) or simulate
-    const remoteEndpoint = (this.remoteIdentity.service as any)?.[0]?.serviceEndpoint as string | undefined;
+    const remoteEndpoint = (
+      (this.remoteIdentity.service as any)?.[0]?.serviceEndpoint ??
+      (this.remoteIdentity.endpoint_url as string)
+    ) as string | undefined;
     if (remoteEndpoint) {
       const handshakeRes = await fetch(`${remoteEndpoint}/handshake`, {
         method:  'POST',
@@ -127,7 +146,7 @@ export class AAPSession {
     // Run through Intent Compiler if manifest is set
     if (this.manifest) {
       const compiled = IntentCompiler.process(payload, this.manifest);
-      if (!compiled.success) throw new Error(`Intent Compiler rejected: ${compiled.error}`);
+      if (!compiled.success) throw new Error(`IntentCompiler rejected action: ${compiled.error}`);
     }
 
     // Build three-envelope message (inner → middle → outer, each encrypted with session key)
@@ -144,9 +163,12 @@ export class AAPSession {
     );
 
     // Send to remote endpoint if available
-    const remoteEndpoint = (this.remoteIdentity?.service as any)?.[0]?.serviceEndpoint as string | undefined;
+    const remoteEndpoint = (
+      (this.remoteIdentity?.service as any)?.[0]?.serviceEndpoint ??
+      (this.remoteIdentity?.endpoint_url as string)
+    ) as string | undefined;
     if (remoteEndpoint) {
-      const res = await fetch(`${remoteEndpoint}/message`, {
+      const res = await fetch(`${remoteEndpoint}/aap/message`, {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify(outerEnv),
@@ -154,7 +176,8 @@ export class AAPSession {
       if (res?.ok) return res.json();
     }
 
-    return { status: 'delivered', message_id: outerEnv.message_id };
+    // Endpoint unavailable — return the envelope for out-of-band delivery
+    return { envelope: outerEnv, status: 'queued', message_id: outerEnv.message_id };
   }
 
   /** Set a capability manifest to enable Intent Compiler gating on send(). */

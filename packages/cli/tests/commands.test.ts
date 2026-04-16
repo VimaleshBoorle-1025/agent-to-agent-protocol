@@ -57,15 +57,15 @@ describe('Keystore', () => {
 // ─── Send Command ────────────────────────────────────────────────────────
 
 describe('send command', () => {
-  const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+  let consoleSpy: jest.SpyInstance;
 
   beforeEach(() => {
+    consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
     storedIdentity = { did: 'did:aap:test', aap_address: 'aap://test.dev.agent', public_key_hex: 'x', private_key_hex: 'y', registered_at: '' };
-    consoleSpy.mockClear();
     mockFetch.mockClear();
   });
 
-  afterAll(() => consoleSpy.mockRestore());
+  afterEach(() => consoleSpy.mockRestore());
 
   test('rejects invalid JSON', async () => {
     await sendCommand('aap://demo.echo', 'not valid json');
@@ -102,15 +102,15 @@ describe('send command', () => {
 // ─── Register Command ────────────────────────────────────────────────────
 
 describe('register command', () => {
-  const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+  let consoleSpy: jest.SpyInstance;
 
   beforeEach(() => {
+    consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
     storedIdentity = null;
-    consoleSpy.mockClear();
     mockFetch.mockClear();
   });
 
-  afterAll(() => consoleSpy.mockRestore());
+  afterEach(() => consoleSpy.mockRestore());
 
   test('calls registry and saves identity on success', async () => {
     mockFetch.mockResolvedValueOnce({
@@ -155,8 +155,13 @@ describe('register command', () => {
 // ─── Whoami ──────────────────────────────────────────────────────────────
 
 describe('whoami command', () => {
-  const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
-  afterAll(() => consoleSpy.mockRestore());
+  let consoleSpy: jest.SpyInstance;
+
+  beforeEach(() => {
+    consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+  });
+
+  afterEach(() => consoleSpy.mockRestore());
 
   test('shows identity when registered', () => {
     storedIdentity = { did: 'did:aap:abc', aap_address: 'aap://my.test.agent', public_key_hex: 'x'.repeat(64), private_key_hex: 'y', registered_at: '2026-04-15T00:00:00Z' };
