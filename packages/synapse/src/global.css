@@ -439,3 +439,70 @@ h1, h2, h3, h4 { font-family: var(--font-head); letter-spacing: -0.03em; }
   border-radius: 50%;
   box-shadow: 0 0 6px #4ade80;
 }
+
+/* ─── Textarea shared reset ────────────────────────────────────────────────── */
+textarea {
+  font-family: var(--font-body);
+  -webkit-appearance: none;
+}
+
+/* ─── Kanban scrollable area ───────────────────────────────────────────────── */
+.kanban-scroll { overflow-x: auto; padding-bottom: 8px; }
+.kanban-scroll::-webkit-scrollbar { height: 3px; }
+
+/* ─── Toast ────────────────────────────────────────────────────────────────── */
+@keyframes toastIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.toast {
+  position: fixed; bottom: 24px; right: 24px; z-index: 9999;
+  padding: 12px 18px;
+  background: #fff; color: #000;
+  border-radius: 10px;
+  font-size: 14px; font-weight: 500;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+  animation: toastIn 0.25s ease forwards;
+}
+
+/* ─── Notice variants ──────────────────────────────────────────────────────── */
+.notice-success { background: rgba(74,222,128,0.08); border: 1px solid rgba(74,222,128,0.2); color: #4ade80; }
+.notice-warn    { background: rgba(251,191,36,0.08); border: 1px solid rgba(251,191,36,0.2); color: #fbbf24; }
+
+/* ─── Pulse animation (used for status dots) ───────────────────────────────── */
+@keyframes pulse {
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(74,222,128,0.4); }
+  50%       { opacity: 0.8; box-shadow: 0 0 0 4px rgba(74,222,128,0); }
+}
+
+/* ─── Sidebar mobile open state ────────────────────────────────────────────── */
+.home-sidebar.open { transform: translateX(0) !important; }
+
+/* ─── Message view responsive ──────────────────────────────────────────────── */
+@media (min-width: 641px) {
+  .msg-sidebar        { display: flex !important; }
+  .msg-sidebar-hidden { display: flex !important; }
+  .msg-thread         { display: flex !important; }
+  .msg-thread-hidden  { display: flex !important; }
+  .msg-back-btn       { display: none !important; }
+}
+
+/* ─── Line clamp utility ───────────────────────────────────────────────────── */
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.line-clamp-3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ─── Input focus glow ─────────────────────────────────────────────────────── */
+.input:focus {
+  border-color: rgba(255,255,255,0.3);
+  box-shadow: 0 0 0 3px rgba(255,255,255,0.06);
+}
