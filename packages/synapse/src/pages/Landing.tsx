@@ -80,7 +80,7 @@ export default function Landing() {
       }}>
         <Logo size="sm" />
         <div style={{ display: 'flex', gap: 8 }}>
-          <button className="btn btn-ghost btn-sm" onClick={() => go('signup')}>Sign in</button>
+          <button className="btn btn-ghost btn-sm" onClick={() => go('signin')}>Sign in</button>
           <button className="btn btn-primary btn-sm" onClick={() => go('signup')}>Get started</button>
         </div>
       </nav>

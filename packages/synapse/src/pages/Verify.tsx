@@ -3,11 +3,10 @@ import { useApp } from '../App';
 import Logo from '../components/Logo';
 
 const CODE_LENGTH = 6;
-// Demo: any 6 digits work. In production this hits a real email service.
-const DEMO_CODE = '000000';
+const REGISTRY = import.meta.env.VITE_REGISTRY_URL || '';
 
 export default function Verify() {
-  const { go, draft } = useApp();
+  const { go, draft, setUser } = useApp();
   const [digits,    setDigits]    = useState<string[]>(Array(CODE_LENGTH).fill(''));
   const [error,     setError]     = useState('');
   const [resent,    setResent]    = useState(false);
@@ -63,23 +62,68 @@ export default function Verify() {
     if (pasted.length === CODE_LENGTH) setTimeout(() => verify(pasted), 80);
   }
 
-  function verify(code?: string) {
+  async function verify(code?: string) {
     const full = code ?? digits.join('');
     if (full.length < CODE_LENGTH) { setError('Enter the complete 6-digit code'); return; }
     setLoading(true);
     setError('');
-    // Demo: accept any 6-digit code
-    setTimeout(() => {
-      setLoading(false);
-      go('onboard');
-    }, 700);
+
+    try {
+      if (REGISTRY) {
+        const r = await fetch(`${REGISTRY}/v1/auth/email/verify`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: draft.email, otp: full, name: draft.name }),
+        });
+        if (!r.ok) {
+          const d = await r.json();
+          setError(d.error || 'Invalid or expired code');
+          setLoading(false);
+          return;
+        }
+        const data = await r.json();
+        const { token, user: u, is_new } = data;
+
+        // Map to SynapseUser and store
+        setUser({
+          id:              u.id       ?? '',
+          name:            u.name     ?? draft.name,
+          email:           u.email    ?? draft.email,
+          handle:          u.handle   ?? '',
+          did:             u.did      ?? '',
+          aap_address:     u.aap_address ?? '',
+          public_key_hex:  u.public_key_hex ?? '',
+          private_key_hex: '',
+          registered_at:   u.registered_at ?? new Date().toISOString(),
+          auth_token:      token,
+          avatar_url:      u.avatar_url ?? '',
+        });
+
+        go(is_new || !u.handle ? 'onboard' : 'home');
+      } else {
+        // Demo mode: any 6 digits work
+        go('onboard');
+      }
+    } catch {
+      setError('Could not verify. Check your connection.');
+    }
+    setLoading(false);
   }
 
-  function resend() {
+  async function resend() {
     setResent(true);
     setCountdown(30);
     setDigits(Array(CODE_LENGTH).fill(''));
     inputRefs.current[0]?.focus();
+    if (REGISTRY) {
+      try {
+        await fetch(`${REGISTRY}/v1/auth/email/send`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: draft.email }),
+        });
+      } catch { /* silent */ }
+    }
     setTimeout(() => setResent(false), 3000);
   }
 
@@ -212,16 +256,18 @@ export default function Verify() {
             ← Change email address
           </button>
 
-          {/* Demo hint */}
-          <div style={{
-            marginTop: 32, padding: '12px 16px',
-            background: 'rgba(255,255,255,0.02)',
-            border: '1px solid rgba(255,255,255,0.06)',
-            borderRadius: 10, fontSize: 12,
-            color: 'rgba(255,255,255,0.3)', lineHeight: 1.5,
-          }}>
-            Demo mode: enter any 6 digits to continue.
-          </div>
+          {/* Demo hint — only shown when no backend configured */}
+          {!REGISTRY && (
+            <div style={{
+              marginTop: 32, padding: '12px 16px',
+              background: 'rgba(255,255,255,0.02)',
+              border: '1px solid rgba(255,255,255,0.06)',
+              borderRadius: 10, fontSize: 12,
+              color: 'rgba(255,255,255,0.3)', lineHeight: 1.5,
+            }}>
+              Demo mode: enter any 6 digits to continue.
+            </div>
+          )}
         </div>
       </div>
     </div>
