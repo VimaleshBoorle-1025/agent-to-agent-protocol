@@ -59,8 +59,8 @@ export class AAPClaude {
    * Generates Ed25519 key pair, signs the registration body.
    */
   async register(): Promise<Record<string, unknown>> {
-    // Lazy-import aap-sdk to avoid bundling issues
-    const { AAPAgent } = await import('aap-sdk');
+    // Lazy-import @a2a_protocol/aap-sdk to avoid bundling issues
+    const { AAPAgent } = await import('@a2a_protocol/aap-sdk');
     const inner = new AAPAgent({
       name:         this.config.name,
       capabilities: this.config.capabilities,
@@ -78,7 +78,7 @@ export class AAPClaude {
    * Connect to another AAP agent. Returns an AAPClaudeSession.
    */
   async connect(address: string): Promise<AAPClaudeSession> {
-    const { AAPAgent } = await import('aap-sdk');
+    const { AAPAgent } = await import('@a2a_protocol/aap-sdk');
     const inner = new AAPAgent({
       name:         this.config.name,
       capabilities: this.config.capabilities,

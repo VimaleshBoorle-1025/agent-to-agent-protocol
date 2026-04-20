@@ -1,5 +1,5 @@
 {
-  "name": "aap-gemini",
+  "name": "@a2a_protocol/aap-gemini",
   "version": "1.0.0",
   "description": "AAP wrapper for Google Gemini — 3 lines to make Gemini AAP-compliant",
   "main": "dist/index.js",
@@ -12,7 +12,7 @@
   "keywords": ["aap", "gemini", "google", "agent", "protocol"],
   "license": "MIT",
   "dependencies": {
-    "aap-sdk": "^1.0.0",
+    "@a2a_protocol/aap-sdk": "^1.0.0",
     "@google/generative-ai": "^0.3.0"
   },
   "devDependencies": {

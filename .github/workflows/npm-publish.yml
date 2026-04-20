@@ -48,32 +48,32 @@ jobs:
 
       # ── Publish ───────────────────────────────────────────────────────────────
 
-      - name: Publish aap-crypto
+      - name: Publish @a2a_protocol/aap-crypto
         run: npm publish --workspace=packages/crypto --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      - name: Publish aap-sdk
+      - name: Publish @a2a_protocol/aap-sdk
         run: npm publish --workspace=packages/sdk-js --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      - name: Publish aap-cli
+      - name: Publish @a2a_protocol/aap-cli
         run: npm publish --workspace=packages/cli --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      - name: Publish aap-claude
+      - name: Publish @a2a_protocol/aap-claude
         run: npm publish --workspace=packages/aap-claude --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      - name: Publish aap-openai
+      - name: Publish @a2a_protocol/aap-openai
         run: npm publish --workspace=packages/aap-openai --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      - name: Publish aap-gemini
+      - name: Publish @a2a_protocol/aap-gemini
         run: npm publish --workspace=packages/aap-gemini --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

@@ -46,7 +46,7 @@ export class AAPGemini {
   }
 
   async register(): Promise<Record<string, unknown>> {
-    const { AAPAgent } = await import('aap-sdk');
+    const { AAPAgent } = await import('@a2a_protocol/aap-sdk');
     const inner = new AAPAgent({
       name:         this.config.name,
       capabilities: this.config.capabilities,
@@ -60,7 +60,7 @@ export class AAPGemini {
   }
 
   async connect(address: string): Promise<AAPGeminiSession> {
-    const { AAPAgent } = await import('aap-sdk');
+    const { AAPAgent } = await import('@a2a_protocol/aap-sdk');
     const inner = new AAPAgent({
       name:         this.config.name,
       capabilities: this.config.capabilities,

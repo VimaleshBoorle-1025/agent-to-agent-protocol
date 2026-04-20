@@ -10,7 +10,7 @@
     "test": "jest --coverage --forceExit"
   },
   "dependencies": {
-    "aap-crypto": "*",
+    "@a2a_protocol/aap-crypto": "*",
     "fastify": "^4.26.0",
     "@fastify/cors": "^9.0.0",
     "@fastify/rate-limit": "^9.1.0",

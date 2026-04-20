@@ -1,5 +1,5 @@
 {
-  "name": "aap-intent-compiler",
+  "name": "@a2a_protocol/aap-intent-compiler",
   "version": "1.0.0",
   "description": "AAP Intent Compiler — security boundary between AI brain and protocol",
   "main": "dist/index.js",

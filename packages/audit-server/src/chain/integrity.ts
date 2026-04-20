@@ -1,4 +1,4 @@
-import { hashContent } from 'aap-crypto';
+import { hashContent } from '@a2a_protocol/aap-crypto';
 
 /**
  * The genesis sentinel: first entry in a chain has no predecessor.

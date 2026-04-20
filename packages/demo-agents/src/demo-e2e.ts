@@ -11,7 +11,7 @@
  *   npx ts-node src/demo-e2e.ts
  */
 
-import { AAPAgent } from 'aap-sdk';
+import { AAPAgent } from '@a2a_protocol/aap-sdk';
 
 const REGISTRY_URL = process.env.REGISTRY_URL ?? 'http://localhost:3001';
 const ALICE_NAME   = `alice.demo.${Date.now()}`;

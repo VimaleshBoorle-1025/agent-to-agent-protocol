@@ -1,8 +1,8 @@
 import { v4 as uuidv4 } from 'uuid';
 import { AgentIdentity, AAPMessage } from './types';
 import { AAP_VERSION, MESSAGE_TTL_SECONDS } from './constants';
-import { ActionType } from 'aap-intent-compiler';
-import { IntentCompiler, CapabilityManifest } from 'aap-intent-compiler';
+import { ActionType } from '@a2a_protocol/aap-intent-compiler';
+import { IntentCompiler, CapabilityManifest } from '@a2a_protocol/aap-intent-compiler';
 import { RelayTransport } from './relay';
 import {
   kyberKeyPair,
@@ -14,7 +14,7 @@ import {
   verify,
   generateNonce,
   deriveSessionKey,
-} from 'aap-crypto';
+} from '@a2a_protocol/aap-crypto';
 
 export class AAPSession {
   private localIdentity: AgentIdentity;

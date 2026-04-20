@@ -1,5 +1,5 @@
 {
-  "name": "aap-cli",
+  "name": "@a2a_protocol/aap-cli",
   "version": "1.0.0",
   "description": "AAP CLI — developer command-line interface for the Agent Authentication Protocol",
   "bin": { "aap": "dist/cli.js" },

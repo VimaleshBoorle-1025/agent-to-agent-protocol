@@ -1,5 +1,5 @@
 {
-  "name": "aap-openai",
+  "name": "@a2a_protocol/aap-openai",
   "version": "1.0.0",
   "description": "AAP wrapper for OpenAI GPT — 3 lines to make GPT AAP-compliant",
   "main": "dist/index.js",
@@ -12,7 +12,7 @@
   "keywords": ["aap", "openai", "gpt", "agent", "protocol"],
   "license": "MIT",
   "dependencies": {
-    "aap-sdk": "^1.0.0",
+    "@a2a_protocol/aap-sdk": "^1.0.0",
     "openai": "^4.0.0"
   },
   "devDependencies": {

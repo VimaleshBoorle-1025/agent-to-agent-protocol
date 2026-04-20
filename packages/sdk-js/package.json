@@ -1,5 +1,5 @@
 {
-  "name": "aap-sdk",
+  "name": "@a2a_protocol/aap-sdk",
   "version": "1.0.0",
   "description": "AAP SDK — 3 lines to make any AI agent AAP-compliant",
   "main": "dist/index.js",
@@ -12,8 +12,8 @@
   "keywords": ["aap", "agent", "protocol", "ai", "authentication"],
   "license": "MIT",
   "dependencies": {
-    "aap-crypto": "^1.0.0",
-    "aap-intent-compiler": "^1.0.0",
+    "@a2a_protocol/aap-crypto": "^1.0.0",
+    "@a2a_protocol/aap-intent-compiler": "^1.0.0",
     "uuid": "^9.0.0"
   },
   "devDependencies": {

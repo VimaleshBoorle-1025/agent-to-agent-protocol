@@ -11,7 +11,7 @@
     "test": "jest --coverage"
   },
   "dependencies": {
-    "aap-sdk": "^1.0.0",
+    "@a2a_protocol/aap-sdk": "^1.0.0",
     "fastify": "^4.26.0",
     "@fastify/websocket": "^8.0.0"
   },

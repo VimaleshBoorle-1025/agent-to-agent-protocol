@@ -2,7 +2,7 @@
  * AAP SDK — JavaScript / TypeScript
  * 3 lines to make any AI agent AAP-compliant.
  *
- * import { AAPAgent } from 'aap-sdk';
+ * import { AAPAgent } from '@a2a_protocol/aap-sdk';
  * const agent = new AAPAgent({ name: 'vimalesh.finance' });
  * await agent.register();
  */

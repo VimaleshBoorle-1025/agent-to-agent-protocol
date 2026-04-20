@@ -1,5 +1,5 @@
 import { FastifyInstance } from 'fastify';
-import { hashContent } from 'aap-crypto';
+import { hashContent } from '@a2a_protocol/aap-crypto';
 import { db } from '../db/client';
 import { computeEntryHash, verifyChain, GENESIS_PREV_HASH, AuditEntry } from '../chain/integrity';
 
