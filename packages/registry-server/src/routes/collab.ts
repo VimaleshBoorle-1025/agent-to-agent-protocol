@@ -7,6 +7,8 @@
 
 import { FastifyInstance } from 'fastify';
 import { db } from '../db/client';
+import { verify as ed25519Verify } from '@a2a_protocol/aap-crypto';
+import { validateTimestamp, checkAndStoreNonce } from '../crypto/validate';
 
 /* ─── helpers ──────────────────────────────────────────────────────────────── */
 
@@ -21,6 +23,18 @@ async function logActivity(project_id: string, agent_did: string, action: string
 
 export async function collabRoutes(app: FastifyInstance) {
 
+  // ── Bootstrap agent_profiles table ──────────────────────────────────────
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS agent_profiles (
+      did          TEXT PRIMARY KEY,
+      name         TEXT NOT NULL DEFAULT '',
+      bio          TEXT NOT NULL DEFAULT '',
+      location     TEXT NOT NULL DEFAULT '',
+      capabilities TEXT[] DEFAULT '{}',
+      updated_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+  `).catch(() => { /* already exists */ });
+
   // ── Agent Discovery ──────────────────────────────────────────────────────
 
   /** GET /v1/ws/agents?q=&limit=&offset= */
@@ -30,15 +44,28 @@ export async function collabRoutes(app: FastifyInstance) {
       const limit  = Math.min(parseInt(req.query.limit  ?? '24', 10), 100);
       const offset = parseInt(req.query.offset ?? '0', 10);
 
-      let sql    = `SELECT aap_address, did, verification_level, trust_score, created_at FROM agents WHERE is_active = true`;
+      // LEFT JOIN agent_profiles (SDK agents) and synapse_users (UI registrations)
+      // Priority: agent_profiles.name > synapse_users.name > aap_address
+      let sql = `
+        SELECT
+          a.aap_address, a.did, a.verification_level, a.trust_score, a.created_at,
+          COALESCE(ap.name, su.name, '')             AS name,
+          COALESCE(ap.bio,  su.bio,  '')             AS bio,
+          COALESCE(ap.location, '')                  AS location,
+          COALESCE(ap.capabilities, '{}')            AS capabilities
+        FROM agents a
+        LEFT JOIN agent_profiles ap ON ap.did = a.did
+        LEFT JOIN synapse_users  su ON su.handle = REPLACE(a.aap_address, 'aap://', '')
+        WHERE a.is_active = true
+      `;
       const vals: unknown[] = [];
 
       if (q) {
         vals.push(`%${q}%`);
-        sql += ` AND aap_address ILIKE $${vals.length}`;
+        sql += ` AND (a.aap_address ILIKE $${vals.length} OR COALESCE(ap.name, su.name, '') ILIKE $${vals.length})`;
       }
 
-      sql += ` ORDER BY trust_score DESC, created_at DESC LIMIT $${vals.length + 1} OFFSET $${vals.length + 2}`;
+      sql += ` ORDER BY a.trust_score DESC, a.created_at DESC LIMIT $${vals.length + 1} OFFSET $${vals.length + 2}`;
       vals.push(limit, offset);
 
       const result = await db.query(sql, vals);
@@ -62,6 +89,58 @@ export async function collabRoutes(app: FastifyInstance) {
       return reply.send({ agents, limit, offset });
     }
   );
+
+  /**
+   * POST /v1/ws/agents/profile — set/update display profile for an SDK-registered agent.
+   *
+   * Body: { did, name, bio, location, capabilities, timestamp, nonce, signature }
+   * Signature is ed25519(JSON.stringify(body_without_signature), privateKey)
+   * Proves ownership of the DID without a password.
+   */
+  app.post<{
+    Body: {
+      did: string; name: string; bio?: string; location?: string;
+      capabilities?: string[]; timestamp: number; nonce: string; signature: string;
+    };
+  }>('/ws/agents/profile', async (req, reply) => {
+    const { did, name, bio = '', location = '', capabilities = [], timestamp, nonce, signature } = req.body;
+
+    if (!did || !name?.trim()) return reply.code(400).send({ error: 'did and name required' });
+
+    // Timestamp check (30-second window)
+    if (!validateTimestamp(timestamp)) {
+      return reply.code(400).send({ error: 'TIMESTAMP_EXPIRED' });
+    }
+
+    // Nonce deduplication
+    if (!(await checkAndStoreNonce(nonce, db))) {
+      return reply.code(400).send({ error: 'REPLAY_ATTACK: nonce already used' });
+    }
+
+    // Look up public key for this DID
+    const agentRow = await db.query(`SELECT public_key_hex FROM agents WHERE did = $1 AND is_active = true`, [did]);
+    if (!agentRow.rows.length) return reply.code(404).send({ error: 'Agent not found' });
+    const publicKeyHex = agentRow.rows[0].public_key_hex as string;
+
+    // Verify signature over body (minus signature field)
+    const { signature: _sig, ...bodyToVerify } = req.body;
+    const msgBytes = new TextEncoder().encode(JSON.stringify(bodyToVerify));
+    if (!ed25519Verify(msgBytes, signature, publicKeyHex)) {
+      return reply.code(401).send({ error: 'INVALID_SIGNATURE' });
+    }
+
+    // Upsert profile
+    await db.query(`
+      INSERT INTO agent_profiles (did, name, bio, location, capabilities, updated_at)
+      VALUES ($1, $2, $3, $4, $5, NOW())
+      ON CONFLICT (did) DO UPDATE
+        SET name = EXCLUDED.name, bio = EXCLUDED.bio,
+            location = EXCLUDED.location, capabilities = EXCLUDED.capabilities,
+            updated_at = NOW()
+    `, [did, name.trim(), bio.trim(), location.trim(), capabilities]);
+
+    return reply.code(200).send({ ok: true });
+  });
 
   // ── Projects ─────────────────────────────────────────────────────────────
 

@@ -25,3 +25,10 @@ export interface AgentIdentity {
   aap_address: string;
   public_key_hex: string;
 }
+
+export interface AgentProfile {
+  name: string;
+  bio?: string;
+  location?: string;
+  capabilities?: string[];
+}

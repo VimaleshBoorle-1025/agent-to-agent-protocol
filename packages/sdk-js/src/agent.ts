@@ -161,6 +161,52 @@ export class AAPAgent {
     };
   }
 
+  /**
+   * Publish a human-readable profile so this agent appears on Synapse's Discover page
+   * with a name, bio, location and capabilities.
+   *
+   * Proves ownership by signing the payload with the agent's private key — no password needed.
+   */
+  async setProfile(profile: {
+    name: string;
+    bio?: string;
+    location?: string;
+    capabilities?: string[];
+  }): Promise<void> {
+    if (!this.identity || !this.privateKeyHex) {
+      throw new Error('Agent not registered. Call register() first.');
+    }
+
+    const timestamp = Date.now();
+    const nonce     = generateNonce();
+
+    const bodyToSign = {
+      did:          this.identity.did,
+      name:         profile.name,
+      bio:          profile.bio ?? '',
+      location:     profile.location ?? '',
+      capabilities: profile.capabilities ?? this.config.capabilities ?? [],
+      timestamp,
+      nonce,
+    };
+
+    const messageBytes = new TextEncoder().encode(JSON.stringify(bodyToSign));
+    const signature    = sign(messageBytes, this.privateKeyHex);
+
+    const res = await fetch(`${this.registryUrl}/v1/ws/agents/profile`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ ...bodyToSign, signature }),
+    });
+
+    if (!res.ok) {
+      const err = await res.json() as { error: string };
+      throw new Error(`Profile update failed: ${err.error}`);
+    }
+
+    console.log(`✅ Profile set for ${this.identity.aap_address}`);
+  }
+
   /** Look up any agent by aap:// address. */
   static async lookup(address: string, registryUrl = DEFAULT_REGISTRY_URL) {
     const encoded  = encodeURIComponent(address);
