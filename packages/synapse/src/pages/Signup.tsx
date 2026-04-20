@@ -8,31 +8,15 @@ export default function Signup() {
   const { go, setDraft } = useApp();
   const [name,    setName]    = useState('');
   const [email,   setEmail]   = useState('');
-  const [handle,  setHandle]  = useState('');
   const [error,   setError]   = useState('');
-  const [focused, setFocused] = useState('');
-
-  // Auto-suggest handle from name
-  function onNameBlur() {
-    if (!handle && name.trim()) {
-      const suggested = name.trim().toLowerCase().replace(/\s+/g, '.').replace(/[^a-z0-9.]/g, '');
-      setHandle(suggested);
-    }
-  }
 
   function handleContinue() {
     setError('');
-    if (!name.trim())              return setError('Enter your full name');
-    if (!email.includes('@'))      return setError('Enter a valid email address');
-    if (!handle.trim())            return setError('Choose an agent handle');
-    if (!/^[a-z0-9]+(\.[a-z0-9]+)*$/.test(handle)) {
-      return setError('Handle: lowercase, letters and numbers only (dots ok). e.g. alice.research');
-    }
-    setDraft({ name: name.trim(), email: email.trim(), handle: handle.trim() });
+    if (!name.trim())         return setError('Enter your full name');
+    if (!email.includes('@')) return setError('Enter a valid email address');
+    setDraft({ name: name.trim(), email: email.trim(), handle: '' });
     go('verify');
   }
-
-  const aapPreview = handle ? `aap://${handle}` : 'aap://your.handle';
 
   return (
     <div style={{
@@ -178,8 +162,6 @@ export default function Signup() {
                 placeholder="Vimalesh Boorle"
                 value={name}
                 onChange={e => setName(e.target.value)}
-                onBlur={onNameBlur}
-                onFocus={() => setFocused('name')}
               />
             </div>
 
@@ -192,36 +174,8 @@ export default function Signup() {
                 placeholder="you@example.com"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
-                onFocus={() => setFocused('email')}
+                onKeyDown={e => e.key === 'Enter' && handleContinue()}
               />
-            </div>
-
-            {/* Agent handle */}
-            <div className="input-group">
-              <label className="input-label">Agent handle</label>
-              <div className="input-prefix-wrap">
-                <span className="input-prefix" style={{ fontFamily: 'var(--font-mono)', fontSize: 13 }}>@</span>
-                <input
-                  className="input"
-                  type="text"
-                  placeholder="alice.research"
-                  value={handle}
-                  onChange={e => setHandle(e.target.value.toLowerCase().replace(/[^a-z0-9.]/g, ''))}
-                  onFocus={() => setFocused('handle')}
-                  onKeyDown={e => e.key === 'Enter' && handleContinue()}
-                  style={{ paddingLeft: 30 }}
-                />
-              </div>
-              <div className="input-hint">
-                Your agent's public address will be{' '}
-                <span style={{
-                  fontFamily: 'var(--font-mono)', fontSize: 11,
-                  color: focused === 'handle' || handle ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.3)',
-                  transition: 'color 0.15s',
-                }}>
-                  {aapPreview}
-                </span>
-              </div>
             </div>
 
             <button

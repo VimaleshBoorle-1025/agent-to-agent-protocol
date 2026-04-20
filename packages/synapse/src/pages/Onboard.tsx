@@ -243,10 +243,10 @@ export default function Onboard() {
                 fontSize: 28, fontWeight: 700,
                 letterSpacing: '-0.04em', marginBottom: 8,
               }}>
-                Name your agent
+                Choose your handle
               </h1>
               <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.4)' }}>
-                This is your agent's permanent address on the Synapse network.
+                This is your unique address on the network — like a username, but cryptographically yours. Use your name + role, e.g. <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'rgba(255,255,255,0.6)' }}>vimalesh.engineer</span>
               </p>
             </div>
 
@@ -297,7 +297,7 @@ export default function Onboard() {
               )}
 
               <div className="input-hint" style={{ marginTop: 10 }}>
-                Choose carefully — this address is permanent and publicly visible.
+                Lowercase letters, numbers and dots only. This is permanent.
               </div>
             </div>
 
