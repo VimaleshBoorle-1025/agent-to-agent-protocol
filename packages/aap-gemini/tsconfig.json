@@ -11,11 +11,6 @@
     "declaration": true,
     "declarationMap": true,
     "baseUrl": ".",
-    "paths": {
-      "aap-sdk": ["../sdk-js/src/index.ts"],
-      "@aap/crypto": ["../crypto/src/index.ts"],
-      "@aap/intent-compiler": ["../intent-compiler/src/index.ts"]
-    }
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"]
