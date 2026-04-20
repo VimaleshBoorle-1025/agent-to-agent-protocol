@@ -10,7 +10,7 @@
     "test": "jest --coverage"
   },
   "dependencies": {
-    "@aap/crypto": "^1.0.0",
+    "aap-crypto": "^1.0.0",
     "@fastify/cors": "^9.0.0",
     "@fastify/rate-limit": "^9.1.0",
     "@fastify/websocket": "^8.3.0",

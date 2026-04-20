@@ -12,8 +12,8 @@
   "keywords": ["aap", "agent", "protocol", "ai", "authentication"],
   "license": "MIT",
   "dependencies": {
-    "@aap/crypto": "^1.0.0",
-    "@aap/intent-compiler": "^1.0.0",
+    "aap-crypto": "^1.0.0",
+    "aap-intent-compiler": "^1.0.0",
     "uuid": "^9.0.0"
   },
   "devDependencies": {

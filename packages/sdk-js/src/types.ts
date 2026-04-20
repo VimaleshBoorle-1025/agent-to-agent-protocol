@@ -1,4 +1,4 @@
-import { ActionType } from '@aap/intent-compiler';
+import { ActionType } from 'aap-intent-compiler';
 
 export interface AAPAgentConfig {
   name: string;

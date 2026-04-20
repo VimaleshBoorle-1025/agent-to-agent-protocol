@@ -1,5 +1,5 @@
 {
-  "name": "@aap/crypto",
+  "name": "aap-crypto",
   "version": "1.0.0",
   "description": "AAP cryptographic primitives — Ed25519, Dilithium3, Kyber768",
   "main": "dist/index.js",

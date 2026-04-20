@@ -28,7 +28,7 @@ export async function authenticateDID(
 
   if (!testMode && signature !== '') {
     // Production: verify signature against registry public key
-    // TODO: fetch public key from registry and verify with @aap/crypto verify()
+    // TODO: fetch public key from registry and verify with aap-crypto verify()
     // For now, accept any valid DID format
   }
 

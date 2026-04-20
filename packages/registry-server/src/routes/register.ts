@@ -2,7 +2,7 @@ import { FastifyInstance } from 'fastify';
 import { v4 as uuidv4 } from 'uuid';
 import { db } from '../db/client';
 import { validateAAPAddress, checkAndStoreNonce, validateTimestamp } from '../crypto/validate';
-import { verify as ed25519Verify } from '@aap/crypto';
+import { verify as ed25519Verify } from 'aap-crypto';
 
 interface RegisterBody {
   aap_address:     string;

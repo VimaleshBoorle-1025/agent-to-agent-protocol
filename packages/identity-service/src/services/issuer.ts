@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
-import { sign, verify as ed25519Verify, hashContent } from '@aap/crypto';
+import { sign, verify as ed25519Verify, hashContent } from 'aap-crypto';
 import { db } from '../db/client';
 
 export type VerificationLevel =

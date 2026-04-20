@@ -9,7 +9,7 @@ import {
   validateTimestamp,
   dilithium3KeyPair,
   dilithium3Sign,
-} from '@aap/crypto';
+} from 'aap-crypto';
 
 export class AAPAgent {
   private config: AAPAgentConfig;

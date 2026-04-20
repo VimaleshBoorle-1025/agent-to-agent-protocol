@@ -25,10 +25,10 @@ jobs:
 
       # ── Build in dependency order ─────────────────────────────────────────────
 
-      - name: Build @aap/crypto
+      - name: Build aap-crypto
         run: npm run build --workspace=packages/crypto
 
-      - name: Build @aap/intent-compiler
+      - name: Build aap-intent-compiler
         run: npm run build --workspace=packages/intent-compiler
 
       - name: Build aap-sdk
@@ -48,7 +48,7 @@ jobs:
 
       # ── Publish ───────────────────────────────────────────────────────────────
 
-      - name: Publish @aap/crypto
+      - name: Publish aap-crypto
         run: npm publish --workspace=packages/crypto --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

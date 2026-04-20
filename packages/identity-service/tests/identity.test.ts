@@ -1,5 +1,5 @@
 import { FastifyInstance } from 'fastify';
-import { generateKeyPair, verify as ed25519Verify, hashContent } from '@aap/crypto';
+import { generateKeyPair, verify as ed25519Verify, hashContent } from 'aap-crypto';
 
 interface AAPCertResponse {
   version:            string;
@@ -210,7 +210,7 @@ describe('Identity Service', () => {
     const hashBytes = new TextEncoder().encode(hashHex);
 
     // Sign with issuer key
-    const { sign } = await import('@aap/crypto');
+    const { sign } = await import('aap-crypto');
     const sig = sign(hashBytes, issuerKP.privateKeyHex);
 
     mockDb.query.mockResolvedValueOnce({
