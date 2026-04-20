@@ -7,7 +7,9 @@
  * await agent.register();
  */
 
-export { AAPAgent } from './agent';
-export { AAPSession } from './session';
+export { AAPAgent }        from './agent';
+export { AAPSession }      from './session';
+export { RelayTransport }  from './relay';
 export { Capability, Action } from './constants';
 export type { AAPAgentConfig, MessageHandler } from './types';
+export type { RelayFrame, RelayEvent }         from './relay';

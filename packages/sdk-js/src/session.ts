@@ -3,6 +3,7 @@ import { AgentIdentity, AAPMessage } from './types';
 import { AAP_VERSION, MESSAGE_TTL_SECONDS } from './constants';
 import { ActionType } from '@aap/intent-compiler';
 import { IntentCompiler, CapabilityManifest } from '@aap/intent-compiler';
+import { RelayTransport } from './relay';
 import {
   kyberKeyPair,
   kyberEncapsulate,
@@ -24,19 +25,84 @@ export class AAPSession {
   private registryUrl: string;
   private connected = false;
   private manifest?: CapabilityManifest;
+  private relay?: RelayTransport;
 
   constructor(
     localIdentity: AgentIdentity,
     localPrivateKeyHex: string,
     remoteAddress: string,
     registryUrl: string,
-    manifest?: CapabilityManifest
+    manifest?: CapabilityManifest,
+    relay?: RelayTransport
   ) {
     this.localIdentity      = localIdentity;
     this.localPrivateKeyHex = localPrivateKeyHex;
     this.remoteAddress      = remoteAddress;
     this.registryUrl        = registryUrl;
     if (manifest) this.manifest = manifest;
+    if (relay)    this.relay    = relay;
+  }
+
+  /**
+   * Relay-mode handshake — performs key exchange over the session relay
+   * instead of a direct HTTP endpoint. Both sides must call this after
+   * connectViaRelay(). The relay forwards the HANDSHAKE frames opaquely.
+   */
+  async handshakeViaRelay(): Promise<void> {
+    if (!this.relay) throw new Error('No relay transport attached');
+
+    const kyberKP = kyberKeyPair();
+    const nonce_a = generateNonce();
+
+    const initPayload = {
+      action_type:      'HANDSHAKE_INIT',
+      from_did:         this.localIdentity.did,
+      kyber_pubkey:     kyberKP.publicKeyHex,
+      nonce_a,
+      timestamp:        Date.now(),
+    };
+
+    // Send HANDSHAKE_INIT over relay
+    this.relay.send(JSON.stringify({ type: 'HANDSHAKE_INIT', ...initPayload }));
+
+    // Wait for HANDSHAKE_RESPONSE from peer
+    await new Promise<void>((resolve, reject) => {
+      const timer = setTimeout(() => reject(new Error('Relay handshake timeout')), 15_000);
+      this.relay!.onReceive((frame) => {
+        try {
+          const msg = JSON.parse(frame.toString());
+          if (msg.type === 'HANDSHAKE_RESPONSE' && msg.kyber_ciphertext) {
+            clearTimeout(timer);
+            const { sharedSecretHex } = kyberDecapsulate(msg.kyber_ciphertext, kyberKP.privateKeyHex);
+            this.sessionKey = deriveSessionKey(sharedSecretHex, nonce_a + (msg.nonce_b ?? ''));
+            this.connected  = true;
+
+            // Re-register receive handler for actual messages
+            this.relay!.onReceive((dataFrame) => {
+              // Consumers can subscribe via onMessage callback — placeholder for future
+              void dataFrame;
+            });
+
+            resolve();
+          } else if (msg.type === 'HANDSHAKE_INIT' && msg.kyber_pubkey) {
+            // We are the guest — respond with encapsulated secret
+            clearTimeout(timer);
+            const { ciphertextHex, sharedSecretHex } = kyberEncapsulate(msg.kyber_pubkey);
+            const nonce_b = generateNonce();
+            this.relay!.send(JSON.stringify({
+              type: 'HANDSHAKE_RESPONSE',
+              kyber_ciphertext: ciphertextHex,
+              nonce_b,
+            }));
+            this.sessionKey = deriveSessionKey(sharedSecretHex, (msg.nonce_a ?? '') + nonce_b);
+            this.connected  = true;
+            resolve();
+          }
+        } catch { /* not a JSON frame — ignore */ }
+      });
+    });
+
+    console.log(`✅ Relay tunnel established (${this.remoteAddress})`);
   }
 
   /**

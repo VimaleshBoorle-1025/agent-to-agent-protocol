@@ -1,0 +1,79 @@
+name: Publish to npm
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'          # trigger on any version tag: v1.0.0, v1.2.3, etc.
+  workflow_dispatch:       # also allow manual publish from GitHub UI
+
+jobs:
+  publish:
+    name: Build & Publish npm packages
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version:    '20'
+          registry-url:    'https://registry.npmjs.org'
+          cache:           'npm'
+
+      - name: Install all workspace dependencies
+        run: npm ci
+
+      # ── Build in dependency order ─────────────────────────────────────────────
+
+      - name: Build @aap/crypto
+        run: npm run build --workspace=packages/crypto
+
+      - name: Build @aap/intent-compiler
+        run: npm run build --workspace=packages/intent-compiler
+
+      - name: Build aap-sdk
+        run: npm run build --workspace=packages/sdk-js
+
+      - name: Build aap-cli
+        run: npm run build --workspace=packages/cli
+
+      - name: Build aap-claude
+        run: npm run build --workspace=packages/aap-claude
+
+      - name: Build aap-openai
+        run: npm run build --workspace=packages/aap-openai
+
+      - name: Build aap-gemini
+        run: npm run build --workspace=packages/aap-gemini
+
+      # ── Publish ───────────────────────────────────────────────────────────────
+
+      - name: Publish @aap/crypto
+        run: npm publish --workspace=packages/crypto --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish aap-sdk
+        run: npm publish --workspace=packages/sdk-js --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish aap-cli
+        run: npm publish --workspace=packages/cli --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish aap-claude
+        run: npm publish --workspace=packages/aap-claude --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish aap-openai
+        run: npm publish --workspace=packages/aap-openai --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish aap-gemini
+        run: npm publish --workspace=packages/aap-gemini --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

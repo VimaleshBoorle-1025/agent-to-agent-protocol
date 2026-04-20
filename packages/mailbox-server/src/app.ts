@@ -3,7 +3,9 @@ import cors from '@fastify/cors';
 import rateLimit from '@fastify/rate-limit';
 import websocket from '@fastify/websocket';
 import { messageRoutes } from './routes/messages';
-import { streamRoutes } from './routes/stream';
+import { streamRoutes }  from './routes/stream';
+import { sessionRoutes } from './routes/session';
+import { pollRoutes }    from './routes/poll';
 
 export interface AppOptions {
   testMode?: boolean;
@@ -22,6 +24,8 @@ export async function buildApp(opts: AppOptions = {}): Promise<FastifyInstance> 
 
   await app.register(messageRoutes, { prefix: '/v1', testMode: opts.testMode });
   await app.register(streamRoutes,  { prefix: '/v1' });
+  await app.register(sessionRoutes, { prefix: '/v1' });
+  await app.register(pollRoutes,    { prefix: '/v1', testMode: opts.testMode });
 
   app.get('/health', async () => ({
     status: 'ok',

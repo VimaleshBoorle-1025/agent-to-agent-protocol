@@ -1,5 +1,6 @@
 import { AAPAgentConfig, AgentIdentity, MessageHandler } from './types';
 import { AAPSession } from './session';
+import { RelayTransport } from './relay';
 import { DEFAULT_REGISTRY_URL } from './constants';
 import {
   generateKeyPair,
@@ -90,6 +91,34 @@ export class AAPAgent {
       this.registryUrl
     );
     await session.handshake();
+    return session;
+  }
+
+  /**
+   * Connect to another agent via the real-time relay.
+   * Both sides call connectViaRelay() with the same handle — whoever connects
+   * first becomes host, the second becomes guest. Works across any platform
+   * (CLI ↔ iOS ↔ Android ↔ web browser ↔ server).
+   *
+   * @param handle   aap:// address or bare handle to rendezvous on
+   * @param mailboxUrl  URL of the mailbox/relay server
+   */
+  async connectViaRelay(handle: string, mailboxUrl: string): Promise<AAPSession> {
+    if (!this.identity || !this.privateKeyHex) {
+      throw new Error('Agent not registered. Call register() first.');
+    }
+    const relay = new RelayTransport(mailboxUrl, handle, this.identity.did);
+    await relay.connect();
+
+    const session = new AAPSession(
+      this.identity,
+      this.privateKeyHex,
+      handle,
+      this.registryUrl,
+      undefined,
+      relay
+    );
+    await session.handshakeViaRelay();
     return session;
   }
 

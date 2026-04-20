@@ -125,3 +125,30 @@ CREATE TABLE IF NOT EXISTS project_activity (
 );
 
 CREATE INDEX IF NOT EXISTS activity_project_idx ON project_activity (project_id, created_at DESC);
+
+-- ── Session Relay ─────────────────────────────────────────────────────────────
+
+CREATE TABLE IF NOT EXISTS relay_sessions (
+  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  handle      TEXT NOT NULL UNIQUE,
+  host_did    TEXT NOT NULL,
+  guest_did   TEXT,
+  state       TEXT NOT NULL DEFAULT 'waiting',  -- waiting | active | closed
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  expires_at  TIMESTAMPTZ NOT NULL DEFAULT (NOW() + INTERVAL '1 hour')
+);
+
+CREATE INDEX IF NOT EXISTS relay_sessions_handle_idx ON relay_sessions (handle, state);
+
+-- ── Poll Queue (REST fallback for platforms without WebSocket) ────────────────
+
+CREATE TABLE IF NOT EXISTS relay_poll_queue (
+  id          SERIAL PRIMARY KEY,
+  to_handle   TEXT NOT NULL,
+  from_did    TEXT NOT NULL,
+  payload     TEXT NOT NULL,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  expires_at  TIMESTAMPTZ NOT NULL DEFAULT (NOW() + INTERVAL '5 minutes')
+);
+
+CREATE INDEX IF NOT EXISTS relay_poll_handle_idx ON relay_poll_queue (to_handle, created_at);
