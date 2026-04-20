@@ -1,8 +1,47 @@
 import { FastifyInstance } from 'fastify';
 import { v4 as uuidv4 } from 'uuid';
+import * as nodeCrypto from 'crypto';
 import { db } from '../db/client';
 import { validateAAPAddress, checkAndStoreNonce, validateTimestamp } from '../crypto/validate';
 import { verify as ed25519Verify } from '@a2a_protocol/aap-crypto';
+
+/**
+ * Verify an ECDSA P-256 signature produced by the browser's Web Crypto API.
+ * Public key is the raw 65-byte uncompressed point (130 hex chars).
+ * Signature is IEEE P1363 format: raw r||s (64 bytes = 128 hex chars).
+ */
+function verifyP256(message: Uint8Array, signatureHex: string, publicKeyHex: string): boolean {
+  try {
+    // Wrap raw uncompressed P-256 public key in SPKI DER envelope
+    const spkiPrefix = Buffer.from('3059301306072a8648ce3d020106082a8648ce3d030107034200', 'hex');
+    const pubKey = nodeCrypto.createPublicKey({
+      key:    Buffer.concat([spkiPrefix, Buffer.from(publicKeyHex, 'hex')]),
+      format: 'der',
+      type:   'spki',
+    });
+
+    // Convert IEEE P1363 (r||s) to DER SEQUENCE for Node's verify
+    const sig = Buffer.from(signatureHex, 'hex');
+    const encInt = (n: Buffer): Buffer => {
+      let i = 0; while (i < n.length - 1 && n[i] === 0) i++; n = n.slice(i);
+      if (n[0] & 0x80) n = Buffer.concat([Buffer.from([0x00]), n]);
+      return Buffer.concat([Buffer.from([0x02, n.length]), n]);
+    };
+    const r = encInt(sig.slice(0, 32));
+    const s = encInt(sig.slice(32, 64));
+    const der = Buffer.concat([Buffer.from([0x30, r.length + s.length]), r, s]);
+
+    return nodeCrypto.createVerify('SHA256').update(message).verify(pubKey, der);
+  } catch { return false; }
+}
+
+/** Auto-detect algorithm from key length and verify. */
+function verifySignature(message: Uint8Array, signatureHex: string, publicKeyHex: string): boolean {
+  // P-256 uncompressed public key = 65 bytes = 130 hex chars
+  if (publicKeyHex.length === 130) return verifyP256(message, signatureHex, publicKeyHex);
+  // Ed25519 public key = 32 bytes = 64 hex chars
+  return ed25519Verify(message, signatureHex, publicKeyHex);
+}
 
 interface RegisterBody {
   aap_address:     string;
@@ -41,7 +80,7 @@ export async function registerRoutes(app: FastifyInstance) {
     // 4. Verify signature over the request body
     const { signature: _sig, ...bodyToVerify } = req.body;
     const messageBytes = new TextEncoder().encode(JSON.stringify(bodyToVerify));
-    const sigValid = ed25519Verify(messageBytes, signature, public_key_hex);
+    const sigValid = verifySignature(messageBytes, signature, public_key_hex);
     if (!sigValid) {
       return reply.code(401).send({ error: 'INVALID_SIGNATURE: request signature verification failed' });
     }
@@ -106,7 +145,7 @@ export async function registerRoutes(app: FastifyInstance) {
       if (agent.rows.length === 0) return reply.code(404).send({ error: 'Agent not found' });
 
       const msgBytes = new TextEncoder().encode(JSON.stringify({ did, endpoint_url }));
-      if (!ed25519Verify(msgBytes, signature, agent.rows[0].public_key_hex)) {
+      if (!verifySignature(msgBytes, signature, agent.rows[0].public_key_hex)) {
         return reply.code(401).send({ error: 'INVALID_SIGNATURE' });
       }
 
@@ -131,7 +170,7 @@ export async function registerRoutes(app: FastifyInstance) {
       if (agent.rows.length === 0) return reply.code(404).send({ error: 'Agent not found' });
 
       const msgBytes = new TextEncoder().encode(`deactivate:${did}`);
-      if (!ed25519Verify(msgBytes, signature, agent.rows[0].public_key_hex)) {
+      if (!verifySignature(msgBytes, signature, agent.rows[0].public_key_hex)) {
         return reply.code(401).send({ error: 'INVALID_SIGNATURE' });
       }
 
