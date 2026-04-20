@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Project, Task, ProjectMember, MOCK_PROJECTS, createProject } from '../api/client';
+import { useState, useEffect } from 'react';
+import { Project, Task, ProjectMember, MOCK_PROJECTS, createProject, fetchProjects, joinProject } from '../api/client';
 import { useApp } from '../App';
 
 function Avatar({ handle, size = 32 }: { handle: string; size?: number }) {
@@ -468,17 +468,23 @@ export default function ProjectsView() {
   const [tab, setTab]  = useState<'all' | 'mine'>('all');
   const [joined, setJoined] = useState<Set<string>>(new Set());
 
+  // Load real projects on mount
+  useEffect(() => {
+    fetchProjects().then(data => { if (data.length) setProjects(data); });
+  }, []);
+
   const displayed = tab === 'mine'
     ? projects.filter(p => p.owner_handle === user?.handle || joined.has(p.id))
     : projects;
 
   async function handleCreate(name: string, desc: string, tags: string[]) {
-    const p = await createProject({ name, description: desc, tags });
+    const p = await createProject({ name, description: desc, tags }, user?.did ?? '');
     setProjects(prev => [p, ...prev]);
     setShowCreate(false);
   }
 
-  function handleJoin(projectId: string) {
+  async function handleJoin(projectId: string) {
+    if (user?.did) await joinProject(projectId, user.did);
     setJoined(prev => { const n = new Set(prev); n.add(projectId); return n; });
   }
 

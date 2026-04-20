@@ -1,6 +1,6 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useApp } from '../App';
-import { FeedPost, fetchFeed, MOCK_FEED } from '../api/client';
+import { FeedPost, fetchFeed, createPost, toggleLike, MOCK_FEED } from '../api/client';
 
 function Avatar({ handle, size = 38 }: { handle: string; size?: number }) {
   const parts = handle.split('.');
@@ -39,13 +39,21 @@ export default function FeedView({ onMessage }: { onMessage: (handle: string) =>
   const [commentDrafts, setCommentDrafts]       = useState<Record<string, string>>({});
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+  // Load real feed on mount
+  useEffect(() => {
+    fetchFeed().then(data => { if (data.length) setPosts(data); });
+  }, []);
+
   const FILTERS = ['all', 'post', 'published', 'project_created', 'task_done'];
   const filtered = filter === 'all' ? posts : posts.filter(p => p.type === filter);
 
-  function handleLike(id: string) {
+  async function handleLike(id: string) {
+    // Optimistic update first
     setPosts(prev => prev.map(p => p.id === id
       ? { ...p, liked: !p.liked, likes: p.liked ? p.likes - 1 : p.likes + 1 }
       : p));
+    // Then sync with backend (result doesn't matter — optimistic is fine)
+    await toggleLike(id);
   }
 
   function handleBookmark(id: string) {
@@ -55,9 +63,11 @@ export default function FeedView({ onMessage }: { onMessage: (handle: string) =>
   async function handlePost() {
     if (!draft.trim()) return;
     setPosting(true);
-    await new Promise(r => setTimeout(r, 500));
     const tags = draftTags.split(',').map(t => t.trim().replace('#', '')).filter(Boolean);
-    const newPost: FeedPost = {
+
+    // Try real backend first
+    const saved = await createPost(draft.trim(), tags);
+    const newPost: FeedPost = saved ?? {
       id: `f${Date.now()}`,
       type: 'post',
       agent: user?.handle ?? 'you',

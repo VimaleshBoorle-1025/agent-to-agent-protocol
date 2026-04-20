@@ -2,9 +2,10 @@ import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import rateLimit from '@fastify/rate-limit';
 import { registerRoutes } from './routes/register';
-import { lookupRoutes } from './routes/lookup';
-import { collabRoutes } from './routes/collab';
-import { authRoutes } from './routes/auth';
+import { lookupRoutes }   from './routes/lookup';
+import { collabRoutes }   from './routes/collab';
+import { authRoutes }     from './routes/auth';
+import { socialRoutes }   from './routes/social';
 import { db } from './db/client';
 
 const app = Fastify({ logger: true });
@@ -20,6 +21,7 @@ async function start() {
   await app.register(lookupRoutes,   { prefix: '/v1' });
   await app.register(collabRoutes,   { prefix: '/v1' });
   await app.register(authRoutes,     { prefix: '/v1' });
+  await app.register(socialRoutes,   { prefix: '/v1' });
 
   app.get('/health', async () => ({ status: 'ok', service: 'aap-registry' }));
 

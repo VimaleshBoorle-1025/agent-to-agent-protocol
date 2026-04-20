@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Conversation, Message, MOCK_AGENTS, MOCK_CONVERSATIONS, sendMessage } from '../api/client';
+import { Conversation, Message, MOCK_AGENTS, MOCK_CONVERSATIONS, sendMessage, fetchConversations, fetchMessages } from '../api/client';
 import { useApp } from '../App';
 
 function Avatar({ handle, size = 36 }: { handle: string; size?: number }) {
@@ -34,7 +34,7 @@ function formatTs(iso: string): string {
 export default function MessagesView({ initialConversation }: { initialConversation?: string }) {
   const { user } = useApp();
   const [convos, setConvos]         = useState<Conversation[]>(MOCK_CONVERSATIONS);
-  const [selected, setSelected]     = useState<string | null>(initialConversation ?? convos[0]?.id ?? null);
+  const [selected, setSelected]     = useState<string | null>(initialConversation ?? null);
   const [input, setInput]           = useState('');
   const [sending, setSending]       = useState(false);
   const [showNew, setShowNew]       = useState(false);
@@ -44,14 +44,41 @@ export default function MessagesView({ initialConversation }: { initialConversat
 
   const activeConvo = convos.find(c => c.id === selected) ?? null;
 
+  // Load real conversations on mount
+  useEffect(() => {
+    fetchConversations().then(data => {
+      if (data.length) {
+        setConvos(data);
+        if (!selected) setSelected(data[0]?.id ?? null);
+      } else if (!selected && MOCK_CONVERSATIONS.length) {
+        setSelected(MOCK_CONVERSATIONS[0].id);
+      }
+    });
+  }, []);
+
+  // Load messages when a conversation is selected
+  useEffect(() => {
+    if (!selected) return;
+    const convo = convos.find(c => c.id === selected);
+    if (!convo) return;
+    // If messages not yet loaded, fetch them
+    if (!convo.messages || convo.messages.length === 0) {
+      fetchMessages(convo.with).then(msgs => {
+        if (msgs.length) {
+          setConvos(prev => prev.map(c => c.id === selected ? { ...c, messages: msgs, unread: 0 } : c));
+        }
+      });
+    }
+  }, [selected]);
+
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [selected, activeConvo?.messages.length]);
+  }, [selected, activeConvo?.messages?.length]);
 
   // Mark as read when opened
   useEffect(() => {
     if (!selected) return;
-    setConvos(prev => prev.map(c => c.id === selected ? { ...c, unread: 0, messages: c.messages.map(m => ({ ...m, read: true })) } : c));
+    setConvos(prev => prev.map(c => c.id === selected ? { ...c, unread: 0, messages: (c.messages ?? []).map(m => ({ ...m, read: true })) } : c));
   }, [selected]);
 
   async function handleSend() {

@@ -152,3 +152,38 @@ CREATE TABLE IF NOT EXISTS relay_poll_queue (
 );
 
 CREATE INDEX IF NOT EXISTS relay_poll_handle_idx ON relay_poll_queue (to_handle, created_at);
+
+-- ── Synapse Social Layer ──────────────────────────────────────────────────────
+
+CREATE TABLE IF NOT EXISTS feed_posts (
+  id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id    UUID REFERENCES synapse_users(id) ON DELETE CASCADE,
+  handle     TEXT NOT NULL,
+  name       TEXT NOT NULL DEFAULT '',
+  content    TEXT NOT NULL,
+  tags       TEXT[] DEFAULT '{}',
+  type       TEXT NOT NULL DEFAULT 'post',  -- post | published | project_created | task_done | joined
+  likes      INTEGER NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS feed_post_likes (
+  post_id UUID REFERENCES feed_posts(id) ON DELETE CASCADE,
+  user_id UUID REFERENCES synapse_users(id) ON DELETE CASCADE,
+  PRIMARY KEY (post_id, user_id)
+);
+
+CREATE TABLE IF NOT EXISTS synapse_messages (
+  id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  from_handle  TEXT NOT NULL,
+  to_handle    TEXT NOT NULL,
+  content      TEXT NOT NULL,
+  read         BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS feed_posts_created_idx ON feed_posts (created_at DESC);
+CREATE INDEX IF NOT EXISTS synapse_messages_to_idx ON synapse_messages (to_handle, created_at DESC);
+CREATE INDEX IF NOT EXISTS synapse_messages_pair_idx ON synapse_messages (
+  LEAST(from_handle, to_handle), GREATEST(from_handle, to_handle), created_at DESC
+);

@@ -2,21 +2,56 @@
 
 const BASE = import.meta.env.VITE_REGISTRY_URL || '';
 
-async function get<T>(path: string): Promise<T | null> {
+// ── Auth token helpers ─────────────────────────────────────────────────────────
+// Auth token is stored in localStorage by App.tsx as part of the user object.
+
+function getToken(): string {
+  try {
+    const raw = localStorage.getItem('synapse:user');
+    if (!raw) return '';
+    const u = JSON.parse(raw);
+    return u?.auth_token ?? '';
+  } catch { return ''; }
+}
+
+function authHeaders(): Record<string, string> {
+  const token = getToken();
+  return token
+    ? { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }
+    : { 'Content-Type': 'application/json' };
+}
+
+// ── HTTP helpers ───────────────────────────────────────────────────────────────
+
+async function get<T>(path: string, auth = false): Promise<T | null> {
   if (!BASE) return null;
   try {
-    const r = await fetch(`${BASE}${path}`);
+    const headers: Record<string, string> = auth ? { Authorization: `Bearer ${getToken()}` } : {};
+    const r = await fetch(`${BASE}${path}`, { headers });
     if (!r.ok) return null;
     return r.json();
   } catch { return null; }
 }
 
-async function post<T>(path: string, body: unknown): Promise<T | null> {
+async function post<T>(path: string, body: unknown, auth = false): Promise<T | null> {
   if (!BASE) return null;
   try {
     const r = await fetch(`${BASE}${path}`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: auth ? authHeaders() : { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (!r.ok) return null;
+    return r.json();
+  } catch { return null; }
+}
+
+async function put<T>(path: string, body: unknown): Promise<T | null> {
+  if (!BASE) return null;
+  try {
+    const r = await fetch(`${BASE}${path}`, {
+      method: 'PUT',
+      headers: authHeaders(),
       body: JSON.stringify(body),
     });
     if (!r.ok) return null;
@@ -329,9 +364,50 @@ export const MOCK_NOTIFICATIONS: Notification[] = [
 
 // ─── API functions (with mock fallback) ──────────────────────────────────────
 
+// Map backend project (uses "title") to frontend Project type (uses "name")
+function mapProject(p: any): Project {
+  return {
+    id:           p.id,
+    name:         p.title ?? p.name ?? '',
+    description:  p.description ?? '',
+    owner_did:    p.owner_did ?? '',
+    owner_handle: p.owner_handle ?? '',
+    status:       p.status ?? 'active',
+    member_count: parseInt(p.member_count ?? p.members?.length ?? 0),
+    task_count:   parseInt(p.task_count   ?? p.tasks?.length   ?? 0),
+    tags:         p.tags ?? [],
+    created_at:   p.created_at ?? '',
+    members:      (p.members ?? []).map((m: any) => ({
+      handle:    m.aap_address?.replace('aap://', '') ?? m.handle ?? m.agent_did ?? '',
+      name:      m.name ?? m.agent_did ?? '',
+      did:       m.agent_did ?? m.did ?? '',
+      role:      m.role ?? 'member',
+      joined_at: m.joined_at ?? '',
+    })),
+    tasks:        p.tasks ?? [],
+    activity:     (p.activity ?? []).map((a: any) => ({
+      id:     String(a.id),
+      actor:  a.agent_did ?? '',
+      action: a.action ?? '',
+      target: a.detail?.task_title ?? a.detail?.title ?? '',
+      ts:     a.created_at ?? '',
+    })),
+  };
+}
+
 export async function fetchAgents(query = '', capability = ''): Promise<Agent[]> {
-  const real = await get<{ agents: Agent[] }>(`/v1/ws/agents?q=${query}&cap=${capability}`);
-  const agents = real?.agents ?? MOCK_AGENTS;
+  const real = await get<{ agents: any[] }>(`/v1/ws/agents?q=${encodeURIComponent(query)}`);
+  const agents: Agent[] = (real?.agents ?? MOCK_AGENTS).map((a: any) => ({
+    handle:       a.aap_address?.replace('aap://', '') ?? a.handle ?? '',
+    name:         a.name ?? a.aap_address ?? '',
+    did:          a.did ?? '',
+    bio:          a.bio ?? '',
+    capabilities: a.capabilities ?? [],
+    trust_score:  a.trust_score ?? 0,
+    project_count: a.project_count ?? 0,
+    registered_at: a.created_at ?? a.registered_at ?? '',
+    location:     a.location ?? '',
+  }));
   return agents.filter(a => {
     const matchQ   = !query      || a.handle.includes(query.toLowerCase()) || a.name.toLowerCase().includes(query.toLowerCase());
     const matchCap = !capability || a.capabilities.includes(capability);
@@ -340,36 +416,128 @@ export async function fetchAgents(query = '', capability = ''): Promise<Agent[]>
 }
 
 export async function fetchProjects(): Promise<Project[]> {
-  const real = await get<{ projects: Project[] }>('/v1/ws/projects');
-  return real?.projects ?? MOCK_PROJECTS;
+  const real = await get<{ projects: any[] }>('/v1/ws/projects');
+  return real?.projects?.map(mapProject) ?? MOCK_PROJECTS;
+}
+
+export async function fetchMyProjects(userDid: string): Promise<Project[]> {
+  const real = await get<{ projects: any[] }>(`/v1/ws/projects?did=${encodeURIComponent(userDid)}`);
+  return real?.projects?.map(mapProject) ?? MOCK_PROJECTS.slice(0, 2);
 }
 
 export async function fetchProjectDetail(id: string): Promise<Project | null> {
-  const real = await get<Project>(`/v1/ws/projects/${id}`);
-  return real ?? MOCK_PROJECTS.find(p => p.id === id) ?? null;
+  const real = await get<any>(`/v1/ws/projects/${id}`);
+  if (real?.project) return mapProject({ ...real.project, ...real });
+  return MOCK_PROJECTS.find(p => p.id === id) ?? null;
 }
 
-export async function createProject(data: { name: string; description: string; tags: string[] }): Promise<Project> {
-  const real = await post<Project>('/v1/ws/projects', data);
-  if (real) return real;
+export async function createProject(
+  data: { name: string; description: string; tags: string[] },
+  ownerDid: string
+): Promise<Project> {
+  const real = await post<any>('/v1/ws/projects', {
+    title:       data.name,
+    description: data.description,
+    tags:        data.tags,
+    owner_did:   ownerDid,
+  }, true);
+  if (real) return mapProject(real);
   return {
-    id: `p${Date.now()}`, ...data, owner_did: '', owner_handle: 'you',
+    id: `p${Date.now()}`, ...data, owner_did: ownerDid, owner_handle: 'you',
     status: 'active', member_count: 1, task_count: 0,
     created_at: new Date().toISOString().slice(0, 10),
     members: [], tasks: [], activity: [],
   };
 }
 
+export async function joinProject(projectId: string, agentDid: string): Promise<boolean> {
+  const r = await post<any>(`/v1/ws/projects/${projectId}/join`, { agent_did: agentDid }, true);
+  return r?.joined ?? false;
+}
+
+export async function addTask(
+  projectId: string,
+  data: { title: string; description: string; priority: string; created_by: string }
+): Promise<Task | null> {
+  return post<Task>(`/v1/ws/projects/${projectId}/tasks`, data, true);
+}
+
+export async function updateTask(
+  taskId: string,
+  data: { agent_did: string; status?: string; assigned_to?: string }
+): Promise<Task | null> {
+  return put<Task>(`/v1/ws/tasks/${taskId}`, data);
+}
+
+// ── Feed ──────────────────────────────────────────────────────────────────────
+
 export async function fetchFeed(): Promise<FeedPost[]> {
+  const real = await get<{ posts: any[] }>('/v1/social/feed', true);
+  if (real?.posts?.length) {
+    return real.posts.map((p: any) => ({
+      id:         p.id,
+      type:       p.type ?? 'post',
+      agent:      p.handle ?? '',
+      agent_name: p.name   ?? p.handle ?? '',
+      content:    p.content ?? '',
+      tags:       p.tags ?? [],
+      likes:      p.likes ?? 0,
+      comments:   0,
+      ts:         p.created_at ?? '',
+      liked:      p.liked ?? false,
+      bookmarked: false,
+    }));
+  }
   return MOCK_FEED;
 }
+
+export async function createPost(content: string, tags: string[]): Promise<FeedPost | null> {
+  const real = await post<any>('/v1/social/posts', { content, tags }, true);
+  if (!real) return null;
+  return {
+    id:         real.id,
+    type:       'post',
+    agent:      real.handle ?? '',
+    agent_name: real.name   ?? '',
+    content:    real.content ?? content,
+    tags:       real.tags ?? tags,
+    likes:      0,
+    comments:   0,
+    ts:         real.created_at ?? new Date().toISOString(),
+    liked:      false,
+    bookmarked: false,
+  };
+}
+
+export async function toggleLike(postId: string): Promise<boolean | null> {
+  const r = await post<{ liked: boolean }>(`/v1/social/posts/${postId}/like`, {}, true);
+  return r?.liked ?? null;
+}
+
+// ── Messaging ─────────────────────────────────────────────────────────────────
+
+export async function fetchConversations(): Promise<Conversation[]> {
+  const real = await get<{ conversations: any[] }>('/v1/social/conversations', true);
+  if (real?.conversations?.length) return real.conversations;
+  return MOCK_CONVERSATIONS;
+}
+
+export async function fetchMessages(otherHandle: string): Promise<Message[]> {
+  const real = await get<{ messages: Message[] }>(`/v1/social/messages/${encodeURIComponent(otherHandle)}`, true);
+  if (real?.messages) return real.messages;
+  const conv = MOCK_CONVERSATIONS.find(c => c.with === otherHandle);
+  return conv?.messages ?? [];
+}
+
+export async function sendMessage(from: string, to: string, content: string): Promise<Message> {
+  const real = await post<Message>('/v1/social/messages', { to_handle: to, content }, true);
+  if (real) return real;
+  return { id: `m${Date.now()}`, from, to, content, ts: new Date().toISOString(), read: false };
+}
+
+// ── Showcase ──────────────────────────────────────────────────────────────────
 
 export async function fetchPublications(): Promise<Publication[]> {
   const real = await get<{ publications: Publication[] }>('/v1/ws/showcase');
   return real?.publications ?? MOCK_PUBLICATIONS;
-}
-
-export async function sendMessage(from: string, to: string, content: string): Promise<Message> {
-  await post('/v1/mailbox/send', { from, to, content });
-  return { id: `m${Date.now()}`, from, to, content, ts: new Date().toISOString(), read: false };
 }
