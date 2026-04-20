@@ -146,7 +146,8 @@ export async function authRoutes(app: FastifyInstance) {
     );
 
     const sent = await sendOTPEmail(email, otp);
-    return reply.send({ sent, demo: !RESEND_API_KEY });
+    // In dev mode (no email service), return the OTP so the UI can show it
+    return reply.send({ sent, demo: !RESEND_API_KEY, ...(!RESEND_API_KEY ? { otp } : {}) });
   });
 
   // ── Email OTP: verify ───────────────────────────────────────────────────────

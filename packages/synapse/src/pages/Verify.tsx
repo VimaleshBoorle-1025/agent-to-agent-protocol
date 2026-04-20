@@ -12,10 +12,23 @@ export default function Verify() {
   const [resent,    setResent]    = useState(false);
   const [loading,   setLoading]   = useState(false);
   const [countdown, setCountdown] = useState(30);
+  const [devOtp,    setDevOtp]    = useState('');
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
+  // Send OTP as soon as the verify page mounts
   useEffect(() => {
-    inputRefs.current[0]?.focus();
+    if (!REGISTRY || !draft.email) { inputRefs.current[0]?.focus(); return; }
+    fetch(`${REGISTRY}/v1/auth/email/send`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: draft.email }),
+    })
+      .then(r => r.json())
+      .then((d: any) => {
+        if (d.otp) setDevOtp(d.otp);   // dev mode: show code on screen
+      })
+      .catch(() => {})
+      .finally(() => inputRefs.current[0]?.focus());
   }, []);
 
   useEffect(() => {
@@ -180,6 +193,32 @@ export default function Verify() {
             {draft.email || 'your email address'}
           </p>
 
+          {/* Dev mode: show OTP inline when no email service is configured */}
+          {devOtp && (
+            <div
+              onClick={() => {
+                const next = devOtp.split('');
+                setDigits(next);
+                setTimeout(() => verify(devOtp), 80);
+              }}
+              style={{
+                marginBottom: 24, padding: '12px 16px', cursor: 'pointer',
+                background: 'rgba(250,204,21,0.06)', border: '1px solid rgba(250,204,21,0.25)',
+                borderRadius: 10, textAlign: 'left',
+              }}
+            >
+              <div style={{ fontSize: 11, color: 'rgba(250,204,21,0.6)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>
+                Dev mode — no email service configured
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 28, fontWeight: 700, letterSpacing: 8, color: '#fff' }}>
+                  {devOtp}
+                </span>
+                <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>click to fill →</span>
+              </div>
+            </div>
+          )}
+
           {/* OTP inputs */}
           <div className="otp-row" style={{ marginBottom: 28 }} onPaste={handlePaste}>
             {digits.map((d, i) => (
@@ -256,18 +295,6 @@ export default function Verify() {
             ← Change email address
           </button>
 
-          {/* Demo hint — only shown when no backend configured */}
-          {!REGISTRY && (
-            <div style={{
-              marginTop: 32, padding: '12px 16px',
-              background: 'rgba(255,255,255,0.02)',
-              border: '1px solid rgba(255,255,255,0.06)',
-              borderRadius: 10, fontSize: 12,
-              color: 'rgba(255,255,255,0.3)', lineHeight: 1.5,
-            }}>
-              Demo mode: enter any 6 digits to continue.
-            </div>
-          )}
         </div>
       </div>
     </div>
