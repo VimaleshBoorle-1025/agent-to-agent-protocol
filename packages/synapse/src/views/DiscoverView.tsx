@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Agent, MOCK_AGENTS } from '../api/client';
+import { useState, useEffect } from 'react';
+import { Agent, MOCK_AGENTS, fetchAgents } from '../api/client';
 
 function Avatar({ handle, size = 40 }: { handle: string; size?: number }) {
   const parts = handle.split('.');
@@ -34,11 +34,17 @@ function TrustBadge({ score }: { score: number }) {
 const ALL_CAPS = ['all', 'research', 'engineering', 'creative', 'finance', 'legal', 'data', 'ml', 'strategy', 'devops', 'cryptography'];
 
 export default function DiscoverView({ onMessage }: { onMessage: (handle: string) => void }) {
-  const [agents]     = useState<Agent[]>(MOCK_AGENTS);
+  const [agents, setAgents] = useState<Agent[]>(MOCK_AGENTS);
   const [search, setSearch] = useState('');
   const [cap, setCap]       = useState('all');
   const [selected, setSelected] = useState<Agent | null>(null);
-  const [connected, setConnected] = useState<Set<string>>(new Set());
+  const [connected, setConnected] = useState<Set<string>>(() => {
+    try { return new Set(JSON.parse(localStorage.getItem('synapse:connected') ?? '[]')); } catch { return new Set(); }
+  });
+
+  useEffect(() => {
+    fetchAgents().then(data => { if (data.length) setAgents(data); });
+  }, []);
 
   const filtered = agents.filter(a => {
     const q = search.toLowerCase();
@@ -51,6 +57,7 @@ export default function DiscoverView({ onMessage }: { onMessage: (handle: string
     setConnected(prev => {
       const next = new Set(prev);
       if (next.has(handle)) next.delete(handle); else next.add(handle);
+      localStorage.setItem('synapse:connected', JSON.stringify([...next]));
       return next;
     });
   }

@@ -50,18 +50,22 @@ function SettingRow({ label, hint, right }: { label: string; hint?: string; righ
 
 export default function SettingsView() {
   const { user, setUser, go } = useApp();
-  const [notifs, setNotifs] = useState({
-    messages:     true,
-    project_updates: true,
-    task_assigned: true,
-    publications: false,
-    mentions:     true,
-    weekly_digest: false,
+  const [notifs, setNotifs] = useState(() => {
+    try {
+      const saved = localStorage.getItem('synapse:notifs');
+      return saved ? JSON.parse(saved) : {
+        messages: true, project_updates: true, task_assigned: true,
+        publications: false, mentions: true, weekly_digest: false,
+      };
+    } catch {
+      return { messages: true, project_updates: true, task_assigned: true, publications: false, mentions: true, weekly_digest: false };
+    }
   });
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [saved, setSaved] = useState(false);
 
   function handleSave() {
+    localStorage.setItem('synapse:notifs', JSON.stringify(notifs));
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   }
@@ -129,8 +133,8 @@ export default function SettingsView() {
           ['mentions',        'Mentions',            'When someone tags your agent'],
           ['weekly_digest',   'Weekly digest',       'Summary of your network activity'],
         ] as [keyof typeof notifs, string, string][]).map(([key, label, hint]) => (
-          <SettingRow key={key} label={label} hint={hint} right={
-            <Toggle checked={notifs[key]} onChange={v => setNotifs(p => ({ ...p, [key]: v }))} />
+          <SettingRow key={String(key)} label={label} hint={hint} right={
+            <Toggle checked={notifs[key]} onChange={v => setNotifs((p: typeof notifs) => ({ ...p, [key]: v }))} />
           } />
         ))}
         <div style={{ padding: '14px 16px' }}>

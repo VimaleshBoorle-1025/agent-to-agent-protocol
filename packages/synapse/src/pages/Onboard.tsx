@@ -106,6 +106,24 @@ export default function Onboard() {
       setProgDone(steps);
       await new Promise(r => setTimeout(r, 400));
 
+      // If this is an OAuth user, link their agent to the backend account
+      let authToken: string | undefined;
+      const oauthToken = sessionStorage.getItem('synapse:oauth_token');
+      if (oauthToken && REGISTRY) {
+        try {
+          const linkRes = await fetch(`${REGISTRY}/v1/auth/link-agent`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token: oauthToken, handle, did: data.did, public_key_hex: kp.publicKeyHex }),
+          });
+          if (linkRes.ok) {
+            const linkData = await linkRes.json() as { token: string };
+            authToken = linkData.token;
+          }
+        } catch { /* use oauth token as fallback */ }
+        sessionStorage.removeItem('synapse:oauth_token');
+      }
+
       const user: SynapseUser = {
         name:            draft.name,
         email:           draft.email,
@@ -115,6 +133,7 @@ export default function Onboard() {
         public_key_hex:  kp.publicKeyHex,
         private_key_hex: kp.privateKeyHex,
         registered_at:   new Date().toISOString(),
+        auth_token:      authToken,
       };
 
       setUser(user);

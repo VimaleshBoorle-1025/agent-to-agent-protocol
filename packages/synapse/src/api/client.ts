@@ -541,3 +541,10 @@ export async function fetchPublications(): Promise<Publication[]> {
   const real = await get<{ publications: Publication[] }>('/v1/ws/showcase');
   return real?.publications ?? MOCK_PUBLICATIONS;
 }
+
+// ── Profile ───────────────────────────────────────────────────────────────────
+
+export async function updateProfile(data: { name: string; bio?: string }): Promise<boolean> {
+  const r = await put<{ ok: boolean }>('/v1/social/profile', data);
+  return r?.ok ?? false;
+}

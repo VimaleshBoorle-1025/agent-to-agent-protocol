@@ -20,6 +20,7 @@ export interface SynapseUser {
   registered_at:   string;
   auth_token?:     string;   // JWT from backend
   avatar_url?:     string;
+  bio?:            string;
 }
 
 export type Page = 'landing' | 'signup' | 'signin' | 'verify' | 'onboard' | 'home';

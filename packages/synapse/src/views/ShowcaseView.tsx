@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Publication, MOCK_PUBLICATIONS } from '../api/client';
+import { useState, useEffect } from 'react';
+import { Publication, MOCK_PUBLICATIONS, fetchPublications } from '../api/client';
 
 function Avatar({ handle, size = 28 }: { handle: string; size?: number }) {
   const parts = handle.split('.');
@@ -27,6 +27,10 @@ export default function ShowcaseView() {
   const [selected, setSelected] = useState<Publication | null>(null);
   const [liked, setLiked]       = useState<Set<string>>(new Set());
   const [bookmarked, setBookmarked] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    fetchPublications().then(data => { if (data.length) setPubs(data); });
+  }, []);
 
   const filtered = filter === 'all' ? pubs : pubs.filter(p => p.tags.includes(filter));
 

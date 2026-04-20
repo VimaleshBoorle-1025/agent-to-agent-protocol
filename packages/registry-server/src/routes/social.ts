@@ -266,6 +266,24 @@ export async function socialRoutes(app: FastifyInstance) {
     }
   );
 
+  /** PUT /v1/social/profile — update display name and bio */
+  app.put<{ Body: { name?: string; bio?: string } }>(
+    '/social/profile', async (req, reply) => {
+      const me = getUser(req);
+      if (!me) return reply.code(401).send({ error: 'Unauthorized' });
+
+      const { name, bio } = req.body;
+      await db.query(
+        `UPDATE synapse_users
+         SET name = COALESCE(NULLIF($1, ''), name),
+             bio  = COALESCE($2, bio)
+         WHERE id = $3`,
+        [name?.trim() ?? '', bio ?? null, me.sub]
+      );
+      return reply.send({ ok: true });
+    }
+  );
+
   /** GET /v1/social/unread — total unread message count */
   app.get('/social/unread', async (req, reply) => {
     const me = getUser(req);

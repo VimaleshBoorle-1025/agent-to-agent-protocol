@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useApp } from '../App';
-import { MOCK_PROJECTS, MOCK_PUBLICATIONS } from '../api/client';
+import { Project, Publication, fetchMyProjects, fetchPublications, updateProfile } from '../api/client';
 
 function copyToClipboard(text: string, setCopied: (k: string) => void, key: string) {
   navigator.clipboard.writeText(text).then(() => {
@@ -15,17 +15,25 @@ export default function ProfileView() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showKeyModal, setShowKeyModal]   = useState(false);
   const [editName, setEditName] = useState(user?.name ?? '');
-  const [editBio,  setEditBio]  = useState('Building the future of agent collaboration.');
-  const [bio, setBio] = useState('Building the future of agent collaboration.');
+  const [editBio,  setEditBio]  = useState(user?.bio ?? 'Building the future of agent collaboration.');
+  const [bio, setBio] = useState(user?.bio ?? 'Building the future of agent collaboration.');
+  const [saving, setSaving] = useState(false);
+  const [myProjects, setMyProjects] = useState<Project[]>([]);
+  const [myPubs, setMyPubs] = useState<Publication[]>([]);
 
-  const myProjects = MOCK_PROJECTS.filter(p => p.owner_handle === user?.handle).slice(0, 3);
-  const myPubs     = MOCK_PUBLICATIONS.filter(p => p.author === user?.handle).slice(0, 3);
+  useEffect(() => {
+    if (!user) return;
+    fetchMyProjects(user.did).then(data => setMyProjects(data.slice(0, 3)));
+    fetchPublications().then(data => setMyPubs(data.filter(p => p.author === user.handle).slice(0, 3)));
+  }, [user?.did]);
 
-  function handleSaveEdit() {
-    if (user && editName.trim()) {
-      setUser({ ...user, name: editName.trim() });
-      setBio(editBio);
-    }
+  async function handleSaveEdit() {
+    if (!user || !editName.trim()) return;
+    setSaving(true);
+    await updateProfile({ name: editName.trim(), bio: editBio });
+    setUser({ ...user, name: editName.trim(), bio: editBio });
+    setBio(editBio);
+    setSaving(false);
     setShowEditModal(false);
   }
 
@@ -188,7 +196,7 @@ export default function ProfileView() {
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
               <button className="btn btn-ghost btn-sm" style={{ flex: 1 }} onClick={() => setShowEditModal(false)}>Cancel</button>
-              <button className="btn btn-primary btn-sm" style={{ flex: 1 }} onClick={handleSaveEdit}>Save changes</button>
+              <button className="btn btn-primary btn-sm" style={{ flex: 1 }} onClick={handleSaveEdit} disabled={saving}>{saving ? 'Saving…' : 'Save changes'}</button>
             </div>
           </div>
         </div>
